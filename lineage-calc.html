@@ -335,7 +335,7 @@
             </div>
 
             <div class="form-group">
-                <label for="pB2Ratio">祝防跳+2佔成功率:</label>
+                <label for="pB2Ratio">祝防跳+2佔成功率 (+5含以下有效):</label>
                 <div class="input-wrap">
                     <input type="number" id="pB2Ratio" step="1" value="50" oninput="saveAndCalculate()">
                     <span class="unit-symbol">%</span>
@@ -360,7 +360,7 @@
             </tbody>
         </table>
         <div class="note">
-            * 物品單價與計算結果現已全部實施「四捨五入至整數」（無小數點）。<br>
+            * 已修正規則：祝防在 +5 時成功仍有機會跳 +2 直達 +7，但在 +6 以上成功時 100% 固定只會 +1。<br>
             * 預設強化機率已設為「N過1」邏輯：+4(25%)、+5(20%)、+6(16.67%)、+7(14.29%)、+8(12.5%)。
         </div>
     </div>
@@ -482,7 +482,7 @@
     }
 
     function loadParams() {
-        const stored = localStorage.getItem('lineage_calc_params_v13');
+        const stored = localStorage.getItem('lineage_calc_params_v17');
         let params = defaultParams;
         if (stored) {
             try {
@@ -540,7 +540,7 @@
 
         params.safeValue = document.getElementById('safeValue').value;
 
-        localStorage.setItem('lineage_calc_params_v13', JSON.stringify(params));
+        localStorage.setItem('lineage_calc_params_v17', JSON.stringify(params));
     }
 
     function setCurrency(type) {
@@ -597,28 +597,39 @@
             const costSafe = eqP + (4 * nP);
             const costPlus3 = eqP + (3 * nP);
 
-            // 1. 全用普通防卷
+            // 基礎成本：純用普通防卷到 +5 與 +6
             const c5_N = (costSafe + nP) / p4to5;
             const c6_N = (c5_N + nP) / p5to6;
+
+            // 1. 全用普通防卷 (方案 A)
             const c7_PlanA = (c6_N + nP) / p6to7;
 
-            // 2. +4 點祝防，其餘補普通防卷
+            // 2. +4 點祝防，其餘補普通防卷 (方案 B)
             const pB4_plus2 = p4to5 * b2Ratio;
             const pB4_plus1 = p4to5 * (1 - b2Ratio);
             let c6_PlanB_base = ((costSafe + bP) - (pB4_plus1 * c5_N)) / pB4_plus2;
             if (c6_PlanB_base < 0) c6_PlanB_base = 0;
             const c7_PlanB = (c6_PlanB_base + nP) / p6to7;
 
-            // 3. +3 砸祝防 + 紅防歸位，+5 再用祝防
+            // 3. 先普通防卷到 +5，再用祝防衝 (方案 D) - +5 祝防可跳 +2 直達 +7
             const pB5_plus2 = p5to6 * b2Ratio;
             const pB5_plus1 = p5to6 * (1 - b2Ratio);
+            const c7_PlanD = (c5_N + bP + (pB5_plus1 * nP)) / (pB5_plus2 + (pB5_plus1 * p6to7));
+
+            // 4. +3 砸祝防 + 紅防歸位，+5 再用祝防 (方案 C)
             const c5_PlanC = costPlus3 + (2 * bP) + cP;
             const c7_PlanC = (c5_PlanC + bP + (pB5_plus1 * nP)) / (pB5_plus2 + (pB5_plus1 * p6to7));
 
+            // 5. +3 砸祝防，變 +4 補普通防卷衝 +5，+5 再砸祝防 (方案 E2)
+            const c5_E2 = costPlus3 + bP + (0.5 * c5_N);
+            const c7_PlanE2 = (c5_E2 + bP + (pB5_plus1 * nP)) / (pB5_plus2 + (pB5_plus1 * p6to7));
+
             plans = [
-                { name: "方案 A：全用普通防卷", cost: c7_PlanA, desc: "從 +4 硬衝到 +7，最傳統穩定的點法。" },
-                { name: "方案 B：+4 用祝防，其餘用普通防卷", cost: c7_PlanB, desc: "+4 賭跳 +6 規避 +5 高爆率階段，再用普通防卷衝 +7。" },
-                { name: "方案 C：+3 砸祝防 + 紅防歸位，+5 再用祝防", cost: c7_PlanC, desc: "+3 砸祝防，變 +4 用紅防降回 +3 重點到 +5，再用祝防衝 +7。" }
+                { name: "方案 D：先用普通防卷衝 +5，+5 再砸祝防", cost: c7_PlanD, desc: "+5 砸祝防，10% 機率直接跳 +7，10% 跳 +6 補普通防卷衝 +7。" },
+                { name: "方案 B：+4 砸祝防，其餘用普通防卷", cost: c7_PlanB, desc: "+4 砸祝防賭 50% 跳 +6 避開高爆率階段，過安定後全補普通防卷。" },
+                { name: "方案 E2：+3 砸祝防，+4 補防卷衝 +5，+5 再砸祝防", cost: c7_PlanE2, desc: "+3 砸祝防，變 +4 補普通防卷硬衝 +5，+5 再用祝防衝 +7。" },
+                { name: "方案 C：+3 砸祝防 + 紅防歸位，+5 再砸祝防", cost: c7_PlanC, desc: "+3 砸祝防，若變 +4 用紅防退回 +3 重點到 +5，+5 再用祝防衝 +7。" },
+                { name: "方案 A：全用普通防卷硬衝", cost: c7_PlanA, desc: "從 +4 一路硬衝到 +7，最傳統穩定的點法。" }
             ];
 
         } else {
@@ -640,15 +651,9 @@
             const c8_PlanB = (c7_PlanB_base + nP) / p7to8;
             const c9_PlanB = (c8_PlanB + nP) / p8to9;
 
-            // 3. +5 點祝防，+7 再點祝防拼 +9
-            const pB7_plus2 = p7to8 * b2Ratio;
-            const pB7_plus1 = p7to8 * (1 - b2Ratio);
-            const c9_PlanC = (c7_PlanB_base + bP + (pB7_plus1 * nP)) / (pB7_plus2 + (pB7_plus1 * p8to9));
-
             plans = [
-                { name: "方案 A：全用普通防卷", cost: c9_PlanA, desc: "一路用普通防卷點至 +9。" },
-                { name: "方案 B：+5 砸祝防(拼+7)，其餘用普通防卷", cost: c9_PlanB, desc: "+5 砸祝防 100% 成功，獲得 +7 後補普通防卷衝 +9。" },
-                { name: "方案 C：+5 砸祝防 + +7 砸祝防", cost: c9_PlanC, desc: "+5 與 +7 均使用祝防拼雙重跳級效益。" }
+                { name: "方案 B：+5 砸祝防(拼跳+7)，其餘用普通防卷", cost: c9_PlanB, desc: "+5 砸祝防 100% 成功，50% 直達 +7，之後補普通防卷衝 +9。" },
+                { name: "方案 A：全用普通防卷", cost: c9_PlanA, desc: "一路用普通防卷點至 +9。" }
             ];
         }
 
