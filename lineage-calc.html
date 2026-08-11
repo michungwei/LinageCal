@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>天堂私服 - 裝備強化期望成本計算器</title>
+    <title>天堂私服 - 過3裝強化期望成本計算器</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -24,7 +24,7 @@
         }
 
         .container {
-            max-width: 900px;
+            max-width: 950px;
             width: 100%;
         }
 
@@ -99,7 +99,7 @@
             gap: 5px;
         }
 
-        .form-group input {
+        .form-group input, .form-group select {
             width: 100px;
             padding: 6px 10px;
             border-radius: 4px;
@@ -178,7 +178,7 @@
 <body>
 
 <div class="container">
-    <h1>天堂私服 +7 衝裝期望成本計算器</h1>
+    <h1>天堂私服 過3裝強化期望成本計算器</h1>
 
     <!-- 幣別切換 -->
     <div class="currency-toggle">
@@ -254,31 +254,51 @@
             <div class="form-group">
                 <label for="safeValue">裝備安定值:</label>
                 <div class="input-wrap">
-                    <input type="number" id="safeValue" value="4" oninput="saveAndCalculate()">
+                    <select id="safeValue" onchange="toggleProbInputs(); saveAndCalculate();">
+                        <option value="4">安定 4 (目標 +7)</option>
+                        <option value="6">安定 6 (目標 +9)</option>
+                    </select>
                     <span class="unit-symbol"></span>
                 </div>
             </div>
-            <div class="form-group">
-                <label for="p4N">+4 衝 +5 (防卷):</label>
+
+            <!-- 各階成功率欄位 -->
+            <div id="prob-4to5" class="form-group">
+                <label for="p4to5">+4 升 +5 成功率 (4過1):</label>
                 <div class="input-wrap">
-                    <input type="number" id="p4N" step="1" value="25" oninput="saveAndCalculate()">
+                    <input type="number" id="p4to5" step="0.01" value="25" oninput="saveAndCalculate()">
                     <span class="unit-symbol">%</span>
                 </div>
             </div>
-            <div class="form-group">
-                <label for="p5N">+5 衝 +6 (防卷):</label>
+            <div id="prob-5to6" class="form-group">
+                <label for="p5to6">+5 升 +6 成功率 (5過1):</label>
                 <div class="input-wrap">
-                    <input type="number" id="p5N" step="1" value="20" oninput="saveAndCalculate()">
+                    <input type="number" id="p5to6" step="0.01" value="20" oninput="saveAndCalculate()">
                     <span class="unit-symbol">%</span>
                 </div>
             </div>
-            <div class="form-group">
-                <label for="p6N">+6 衝 +7 (防卷):</label>
+            <div id="prob-6to7" class="form-group">
+                <label for="p6to7">+6 升 +7 成功率 (6過1):</label>
                 <div class="input-wrap">
-                    <input type="number" id="p6N" step="1" value="15" oninput="saveAndCalculate()">
+                    <input type="number" id="p6to7" step="0.01" value="16.67" oninput="saveAndCalculate()">
                     <span class="unit-symbol">%</span>
                 </div>
             </div>
+            <div id="prob-7to8" class="form-group">
+                <label for="p7to8">+7 升 +8 成功率 (7過1):</label>
+                <div class="input-wrap">
+                    <input type="number" id="p7to8" step="0.01" value="14.29" oninput="saveAndCalculate()">
+                    <span class="unit-symbol">%</span>
+                </div>
+            </div>
+            <div id="prob-8to9" class="form-group">
+                <label for="p8to9">+8 升 +9 成功率 (8過1):</label>
+                <div class="input-wrap">
+                    <input type="number" id="p8to9" step="0.01" value="12.5" oninput="saveAndCalculate()">
+                    <span class="unit-symbol">%</span>
+                </div>
+            </div>
+
             <div class="form-group">
                 <label for="pB2Ratio">祝防跳+2佔成功率:</label>
                 <div class="input-wrap">
@@ -291,12 +311,12 @@
 
     <!-- 計算結果展示 -->
     <div class="results">
-        <h2>強化方案成本比較 (+7 為目標)</h2>
+        <h2>強化方案成本比較 (<span id="target-title">過3裝</span>)</h2>
         <table>
             <thead>
                 <tr>
                     <th>強化方案策略描述</th>
-                    <th>+7 期望總成本 (<span class="unit-title">天幣</span>)</th>
+                    <th><span id="target-text">+7</span> 期望總成本 (<span class="unit-title">天幣</span>)</th>
                     <th>說明</th>
                 </tr>
             </thead>
@@ -305,41 +325,36 @@
             </tbody>
         </table>
         <div class="note">
-            * 網頁會自動記憶「天幣」與「銀票」各自輸入的物品價格與參數。<br>
-            * 切換幣別模式時，會直接使用該幣別設定的單價進行計算。<br>
-            * 所有包含「祝防」的策略均已將跳+2（直接爆升）與跳+1（後續補卷）的機率分流納入聯立期望值運算。
+            * 預設強化機率已設為「N過1」邏輯：+4(25%)、+5(20%)、+6(16.67%)、+7(14.29%)、+8(12.5%)。<br>
+            * 安定 4 目標為點至 +7 (過3)；安定 6 目標為點至 +9 (過3)。
         </div>
     </div>
 </div>
 
 <script>
-    // 預設參數
     const defaultParams = {
         currency: 'aden',
-        
-        // 天幣價格
         eqPrice_aden: 100000,
         nPrice_aden: 25000,
         bPrice_aden: 700000,
         cPrice_aden: 0,
 
-        // 銀票價格
         eqPrice_ticket: 10,
         nPrice_ticket: 2,
         bPrice_ticket: 70,
         cPrice_ticket: 0,
 
-        // 機率設定 (百分比數字 25 代表 25%)
-        safeValue: 4,
-        p4N: 25,
-        p5N: 20,
-        p6N: 15,
+        safeValue: "4",
+        p4to5: 25,
+        p5to6: 20,
+        p6to7: 16.67,
+        p7to8: 14.29,
+        p8to9: 12.5,
         pB2Ratio: 50
     };
 
     let currentCurrency = 'aden';
 
-    // 千分位格式化
     function formatThousands(val) {
         if (val === "" || val === null || val === undefined) return "";
         const cleanNum = val.toString().replace(/,/g, '');
@@ -349,14 +364,12 @@
         return parts.join('.');
     }
 
-    // 解析數字
     function parseNumber(val) {
         if (!val) return 0;
         const clean = val.toString().replace(/,/g, '');
         return parseFloat(clean) || 0;
     }
 
-    // 處理輸入
     function handlePriceInput(input) {
         const rawValue = input.value.replace(/,/g, '');
         if (!isNaN(rawValue)) {
@@ -365,9 +378,32 @@
         saveAndCalculate();
     }
 
-    // 載入 localStorage
+    function toggleProbInputs() {
+        const safeMode = document.getElementById('safeValue').value;
+        const targetTitle = document.getElementById('target-title');
+        const targetText = document.getElementById('target-text');
+
+        if (safeMode === "4") {
+            document.getElementById('prob-4to5').style.display = 'flex';
+            document.getElementById('prob-5to6').style.display = 'flex';
+            document.getElementById('prob-6to7').style.display = 'flex';
+            document.getElementById('prob-7to8').style.display = 'none';
+            document.getElementById('prob-8to9').style.display = 'none';
+            targetTitle.innerText = "安定4過3裝 (+7)";
+            targetText.innerText = "+7";
+        } else {
+            document.getElementById('prob-4to5').style.display = 'none';
+            document.getElementById('prob-5to6').style.display = 'none'; // 安定6內 100%
+            document.getElementById('prob-6to7').style.display = 'flex';
+            document.getElementById('prob-7to8').style.display = 'flex';
+            document.getElementById('prob-8to9').style.display = 'flex';
+            targetTitle.innerText = "安定6過3裝 (+9)";
+            targetText.innerText = "+9";
+        }
+    }
+
     function loadParams() {
-        const stored = localStorage.getItem('lineage_calc_params_v6');
+        const stored = localStorage.getItem('lineage_calc_params_v9');
         let params = defaultParams;
         if (stored) {
             try {
@@ -386,17 +422,21 @@
             if (input) input.value = formatThousands(params[key]);
         });
 
-        const normalKeys = ['safeValue', 'p4N', 'p5N', 'p6N', 'pB2Ratio'];
+        const normalKeys = ['p4to5', 'p5to6', 'p6to7', 'p7to8', 'p8to9', 'pB2Ratio'];
         normalKeys.forEach(key => {
             const input = document.getElementById(key);
             if (input) input.value = params[key];
         });
 
+        const safeSelect = document.getElementById('safeValue');
+        if (safeSelect) safeSelect.value = params.safeValue || "4";
+
         if (params.currency) currentCurrency = params.currency;
+        
+        toggleProbInputs();
         updateCurrencyUI();
     }
 
-    // 儲存參數
     function saveParams() {
         const params = { currency: currentCurrency };
 
@@ -409,16 +449,17 @@
             params[key] = el ? parseNumber(el.value) : 0;
         });
 
-        const normalKeys = ['safeValue', 'p4N', 'p5N', 'p6N', 'pB2Ratio'];
+        const normalKeys = ['p4to5', 'p5to6', 'p6to7', 'p7to8', 'p8to9', 'pB2Ratio'];
         normalKeys.forEach(key => {
             const el = document.getElementById(key);
             params[key] = el ? parseFloat(el.value) || 0 : 0;
         });
 
-        localStorage.setItem('lineage_calc_params_v6', JSON.stringify(params));
+        params.safeValue = document.getElementById('safeValue').value;
+
+        localStorage.setItem('lineage_calc_params_v9', JSON.stringify(params));
     }
 
-    // 切換幣別模式
     function setCurrency(type) {
         currentCurrency = type;
         updateCurrencyUI();
@@ -449,7 +490,6 @@
         });
     }
 
-    // 核心計算邏輯
     function calculate() {
         const suffix = currentCurrency === 'aden' ? '_aden' : '_ticket';
 
@@ -458,59 +498,78 @@
         const bP = parseNumber(document.getElementById('bPrice' + suffix).value);
         const cP = parseNumber(document.getElementById('cPrice' + suffix).value);
 
-        const safe = parseFloat(document.getElementById('safeValue').value) || 4;
-        
-        // 將輸入的 % 轉回 0~1 機率小數進行演算
-        const p4 = (parseFloat(document.getElementById('p4N').value) || 0) / 100;
-        const p5 = (parseFloat(document.getElementById('p5N').value) || 0) / 100;
-        const p6 = (parseFloat(document.getElementById('p6N').value) || 0) / 100;
+        const safeMode = document.getElementById('safeValue').value;
+
+        const p4to5 = (parseFloat(document.getElementById('p4to5').value) || 0) / 100;
+        const p5to6 = (parseFloat(document.getElementById('p5to6').value) || 0) / 100;
+        const p6to7 = (parseFloat(document.getElementById('p6to7').value) || 0) / 100;
+        const p7to8 = (parseFloat(document.getElementById('p7to8').value) || 0) / 100;
+        const p8to9 = (parseFloat(document.getElementById('p8to9').value) || 0) / 100;
         const b2Ratio = (parseFloat(document.getElementById('pB2Ratio').value) || 0) / 100;
 
-        if (p4 <= 0 || p5 <= 0 || p6 <= 0) return;
+        let plans = [];
 
-        // 衝到安定值成本
-        const costSafe = eqP + (safe * nP);
-        // 衝到 +3 的基礎成本
-        const costPlus3 = eqP + (3 * nP);
+        if (safeMode === "4") {
+            // === 安定 4 (目標 +7) ===
+            if (p4to5 <= 0 || p5to6 <= 0 || p6to7 <= 0) return;
 
-        // --- 方案 A: 全程 防卷 ---
-        const c5_N = (costSafe + nP) / p4;
-        const c6_N = (c5_N + nP) / p5;
-        const c7_Plan1 = (c6_N + nP) / p6;
+            const costSafe = eqP + (4 * nP);
+            const costPlus3 = eqP + (3 * nP);
 
-        // --- 方案 B: +4 點 祝防，其餘補 防卷 ---
-        const pB4_plus2 = p4 * b2Ratio;
-        const pB4_plus1 = p4 * (1 - b2Ratio);
+            // 1. 全用普通防卷
+            const c5_N = (costSafe + nP) / p4to5;
+            const c6_N = (c5_N + nP) / p5to6;
+            const c7_PlanA = (c6_N + nP) / p6to7;
 
-        let c6_Plan2_base = ((costSafe + bP) - (pB4_plus1 * c5_N)) / pB4_plus2;
-        if (c6_Plan2_base < 0) c6_Plan2_base = 0;
-        const c7_Plan2 = (c6_Plan2_base + nP) / p6;
+            // 2. +4 點祝防，其餘補普通防卷
+            const pB4_plus2 = p4to5 * b2Ratio;
+            const pB4_plus1 = p4to5 * (1 - b2Ratio);
+            let c6_PlanB_base = ((costSafe + bP) - (pB4_plus1 * c5_N)) / pB4_plus2;
+            if (c6_PlanB_base < 0) c6_PlanB_base = 0;
+            const c7_PlanB = (c6_PlanB_base + nP) / p6to7;
 
-        // --- 方案 C: +4 與 +5 全用 祝防 (混合方程) ---
-        const pB5_plus2 = p5 * b2Ratio;
-        const pB5_plus1 = p5 * (1 - b2Ratio);
+            // 3. +3 砸祝防 + 紅防歸位，+5 再用祝防
+            const pB5_plus2 = p5to6 * b2Ratio;
+            const pB5_plus1 = p5to6 * (1 - b2Ratio);
+            const c5_PlanC = costPlus3 + (2 * bP) + cP;
+            const c7_PlanC = (c5_PlanC + bP + (pB5_plus1 * nP)) / (pB5_plus2 + (pB5_plus1 * p6to7));
 
-        const A = pB5_plus2 + (pB5_plus1 * p6);
-        const B_const = (pB5_plus1 * nP) + bP;
+            plans = [
+                { name: "方案 A：全用普通防卷", cost: c7_PlanA, desc: "從 +4 硬衝到 +7，最傳統穩定的點法。" },
+                { name: "方案 B：+4 用祝防，其餘用普通防卷", cost: c7_PlanB, desc: "+4 賭跳 +6 規避 +5 高爆率階段，再用普通防卷衝 +7。" },
+                { name: "方案 C：+3 砸祝防 + 紅防歸位，+5 再用祝防", cost: c7_PlanC, desc: "+3 砸祝防，變 +4 用紅防降回 +3 重點到 +5，再用祝防衝 +7。" }
+            ];
 
-        const leftSide = costSafe + bP + (pB4_plus2 * nP) + (pB4_plus1 * B_const);
-        const rightCoeff = (pB4_plus2 * p6) + (pB4_plus1 * A);
-        const c7_Plan3 = leftSide / rightCoeff;
+        } else {
+            // === 安定 6 (目標 +9) ===
+            if (p6to7 <= 0 || p7to8 <= 0 || p8to9 <= 0) return;
 
-        // --- 方案 D: 先用防卷到 +5，再用祝防衝 ---
-        const c7_Plan4 = (c5_N + bP + (pB5_plus1 * nP)) / (pB5_plus2 + (pB5_plus1 * p6));
+            const costPlus5 = eqP + (5 * nP);
+            const costPlus6 = eqP + (6 * nP);
 
-        // --- 方案 E: +3 砸祝防 + 紅防歸位，+5 再用祝防 ---
-        const c5_PlanE = costPlus3 + (2 * bP) + cP;
-        const c7_Plan5 = (c5_PlanE + bP + (pB5_plus1 * nP)) / (pB5_plus2 + (pB5_plus1 * p6));
+            // 1. 全用普通防卷 (衝到 +6 無風險，+6衝+7, +7衝+8, +8衝+9)
+            const c7_N = (costPlus6 + nP) / p6to7;
+            const c8_N = (c7_N + nP) / p7to8;
+            const c9_PlanA = (c8_N + nP) / p8to9;
 
-        const plans = [
-            { id: 1, name: "方案 A：全用普通防卷", cost: c7_Plan1, desc: "從 +4 硬衝到 +7，最傳統穩定的點法。" },
-            { id: 2, name: "方案 B：+4 用祝防，其餘用普通防卷", cost: c7_Plan2, desc: "+4 賭跳 +6 規避 +5 高爆率階段，再用普通防卷衝 +7。" },
-            { id: 3, name: "方案 C：+4 與 +5 全用祝防", cost: c7_Plan3, desc: "+4 與 +5 均砸祝防，利用雙重跳級效益拼最省錢。" },
-            { id: 4, name: "方案 D：先防卷到 +5，再用祝防", cost: c7_Plan4, desc: "+4 用防卷衝 +5，到 +5 才使用祝防拼跳 +7 或 +6。" },
-            { id: 5, name: "方案 E：+3 砸祝防 + 紅防歸位，+5 再用祝防", cost: c7_Plan5, desc: "+3 砸祝防，若變 +4 用紅防降回 +3 重新點到 +5，再用祝防衝 +7。" }
-        ];
+            // 2. +5 點祝防衝 +7，後續補普通防卷至 +9
+            const pB_jump2 = b2Ratio;
+            const pB_jump1 = 1 - b2Ratio;
+            const c7_PlanB_base = (costPlus5 + bP + (pB_jump1 * nP)) / (pB_jump2 + (pB_jump1 * p6to7));
+            const c8_PlanB = (c7_PlanB_base + nP) / p7to8;
+            const c9_PlanB = (c8_PlanB + nP) / p8to9;
+
+            // 3. +5 點祝防，+7 再點祝防拼 +9
+            const pB7_plus2 = p7to8 * b2Ratio;
+            const pB7_plus1 = p7to8 * (1 - b2Ratio);
+            const c9_PlanC = (c7_PlanB_base + bP + (pB7_plus1 * nP)) / (pB7_plus2 + (pB7_plus1 * p8to9));
+
+            plans = [
+                { name: "方案 A：全用普通防卷", cost: c9_PlanA, desc: "一路用普通防卷點至 +9。" },
+                { name: "方案 B：+5 砸祝防(拼+7)，其餘用普通防卷", cost: c9_PlanB, desc: "+5 砸祝防 100% 成功，獲得 +7 後補普通防卷衝 +9。" },
+                { name: "方案 C：+5 砸祝防 + +7 砸祝防", cost: c9_PlanC, desc: "+5 與 +7 均使用祝防拼雙重跳級效益。" }
+            ];
+        }
 
         plans.sort((a, b) => a.cost - b.cost);
 
