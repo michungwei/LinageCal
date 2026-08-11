@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>天堂私服 - 裝備強化期望成本計算器</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --accent-color: #f39c12;
+            --text-color: #e0e0e0;
+            --border-color: #333;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--accent-color);
+            margin-bottom: 20px;
+        }
+
+        .currency-toggle {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+
+        .currency-toggle button {
+            background-color: #2c3e50;
+            color: #fff;
+            border: 2px solid transparent;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .currency-toggle button.active {
+            background-color: var(--accent-color);
+            color: #000;
+            border-color: #fff;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px 20px;
+        }
+
+        .card h2 {
+            font-size: 18px;
+            margin-top: 0;
+            color: var(--accent-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-group label {
+            font-size: 14px;
+            flex: 1;
+        }
+
+        .input-wrap {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .form-group input {
+            width: 100px;
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: #2a2a2a;
+            color: #fff;
+            text-align: right;
+            font-size: 14px;
+        }
+
+        .unit-symbol {
+            font-size: 14px;
+            color: var(--text-color);
+            width: 15px;
+        }
+
+        .currency-inputs {
+            display: none;
+        }
+
+        .currency-inputs.active {
+            display: block;
+        }
+
+        .results {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .results h2 {
+            margin-top: 0;
+            color: var(--accent-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #2a2a2a;
+            color: var(--accent-color);
+        }
+
+        tr.highlight {
+            background-color: rgba(243, 156, 18, 0.15);
+            font-weight: bold;
+        }
+
+        .badge {
+            background-color: #27ae60;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+        .note {
+            font-size: 12px;
+            color: #888;
+            margin-top: 15px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>天堂私服 +7 衝裝期望成本計算器</h1>
+
+    <!-- 幣別切換 -->
+    <div class="currency-toggle">
+        <button id="btn-aden" class="active" onclick="setCurrency('aden')">天幣模式</button>
+        <button id="btn-ticket" onclick="setCurrency('ticket')">銀票模式</button>
+    </div>
+
+    <div class="grid">
+        <!-- 物品價格設定 -->
+        <div class="card">
+            <h2>物品價格設定 (<span class="unit-title">天幣</span>)</h2>
+
+            <!-- 天幣專用價格輸入區 -->
+            <div id="aden-inputs" class="currency-inputs active">
+                <div class="form-group">
+                    <label for="eqPrice_aden">裝備單價 (天幣):</label>
+                    <div class="input-wrap">
+                        <input type="text" id="eqPrice_aden" class="number-input" oninput="handlePriceInput(this)">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="nPrice_aden">防卷 單價 (天幣):</label>
+                    <div class="input-wrap">
+                        <input type="text" id="nPrice_aden" class="number-input" oninput="handlePriceInput(this)">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="bPrice_aden">祝防 單價 (天幣):</label>
+                    <div class="input-wrap">
+                        <input type="text" id="bPrice_aden" class="number-input" oninput="handlePriceInput(this)">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="cPrice_aden">紅防 單價 (天幣):</label>
+                    <div class="input-wrap">
+                        <input type="text" id="cPrice_aden" class="number-input" oninput="handlePriceInput(this)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 銀票專用價格輸入區 -->
+            <div id="ticket-inputs" class="currency-inputs">
+                <div class="form-group">
+                    <label for="eqPrice_ticket">裝備單價 (銀票):</label>
+                    <div class="input-wrap">
+                        <input type="text" id="eqPrice_ticket" class="number-input" oninput="handlePriceInput(this)">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="nPrice_ticket">防卷 單價 (銀票):</label>
+                    <div class="input-wrap">
+                        <input type="text" id="nPrice_ticket" class="number-input" oninput="handlePriceInput(this)">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="bPrice_ticket">祝防 單價 (銀票):</label>
+                    <div class="input-wrap">
+                        <input type="text" id="bPrice_ticket" class="number-input" oninput="handlePriceInput(this)">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="cPrice_ticket">紅防 單價 (銀票):</label>
+                    <div class="input-wrap">
+                        <input type="text" id="cPrice_ticket" class="number-input" oninput="handlePriceInput(this)">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 成功機率與安定值設定 -->
+        <div class="card">
+            <h2>強化成功率與設定</h2>
+            <div class="form-group">
+                <label for="safeValue">裝備安定值:</label>
+                <div class="input-wrap">
+                    <input type="number" id="safeValue" value="4" oninput="saveAndCalculate()">
+                    <span class="unit-symbol"></span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="p4N">+4 衝 +5 (防卷):</label>
+                <div class="input-wrap">
+                    <input type="number" id="p4N" step="1" value="25" oninput="saveAndCalculate()">
+                    <span class="unit-symbol">%</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="p5N">+5 衝 +6 (防卷):</label>
+                <div class="input-wrap">
+                    <input type="number" id="p5N" step="1" value="20" oninput="saveAndCalculate()">
+                    <span class="unit-symbol">%</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="p6N">+6 衝 +7 (防卷):</label>
+                <div class="input-wrap">
+                    <input type="number" id="p6N" step="1" value="15" oninput="saveAndCalculate()">
+                    <span class="unit-symbol">%</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="pB2Ratio">祝防跳+2佔成功率:</label>
+                <div class="input-wrap">
+                    <input type="number" id="pB2Ratio" step="1" value="50" oninput="saveAndCalculate()">
+                    <span class="unit-symbol">%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 計算結果展示 -->
+    <div class="results">
+        <h2>強化方案成本比較 (+7 為目標)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>強化方案策略描述</th>
+                    <th>+7 期望總成本 (<span class="unit-title">天幣</span>)</th>
+                    <th>說明</th>
+                </tr>
+            </thead>
+            <tbody id="result-rows">
+                <!-- 動態繪製結果 -->
+            </tbody>
+        </table>
+        <div class="note">
+            * 網頁會自動記憶「天幣」與「銀票」各自輸入的物品價格與參數。<br>
+            * 切換幣別模式時，會直接使用該幣別設定的單價進行計算。<br>
+            * 所有包含「祝防」的策略均已將跳+2（直接爆升）與跳+1（後續補卷）的機率分流納入聯立期望值運算。
+        </div>
+    </div>
+</div>
+
+<script>
+    // 預設參數
+    const defaultParams = {
+        currency: 'aden',
+        
+        // 天幣價格
+        eqPrice_aden: 100000,
+        nPrice_aden: 25000,
+        bPrice_aden: 700000,
+        cPrice_aden: 0,
+
+        // 銀票價格
+        eqPrice_ticket: 10,
+        nPrice_ticket: 2,
+        bPrice_ticket: 70,
+        cPrice_ticket: 0,
+
+        // 機率設定 (百分比數字 25 代表 25%)
+        safeValue: 4,
+        p4N: 25,
+        p5N: 20,
+        p6N: 15,
+        pB2Ratio: 50
+    };
+
+    let currentCurrency = 'aden';
+
+    // 千分位格式化
+    function formatThousands(val) {
+        if (val === "" || val === null || val === undefined) return "";
+        const cleanNum = val.toString().replace(/,/g, '');
+        if (isNaN(cleanNum)) return "";
+        const parts = cleanNum.split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return parts.join('.');
+    }
+
+    // 解析數字
+    function parseNumber(val) {
+        if (!val) return 0;
+        const clean = val.toString().replace(/,/g, '');
+        return parseFloat(clean) || 0;
+    }
+
+    // 處理輸入
+    function handlePriceInput(input) {
+        const rawValue = input.value.replace(/,/g, '');
+        if (!isNaN(rawValue)) {
+            input.value = formatThousands(rawValue);
+        }
+        saveAndCalculate();
+    }
+
+    // 載入 localStorage
+    function loadParams() {
+        const stored = localStorage.getItem('lineage_calc_params_v6');
+        let params = defaultParams;
+        if (stored) {
+            try {
+                params = { ...defaultParams, ...JSON.parse(stored) };
+            } catch (e) {
+                params = defaultParams;
+            }
+        }
+
+        const priceKeys = [
+            'eqPrice_aden', 'nPrice_aden', 'bPrice_aden', 'cPrice_aden',
+            'eqPrice_ticket', 'nPrice_ticket', 'bPrice_ticket', 'cPrice_ticket'
+        ];
+        priceKeys.forEach(key => {
+            const input = document.getElementById(key);
+            if (input) input.value = formatThousands(params[key]);
+        });
+
+        const normalKeys = ['safeValue', 'p4N', 'p5N', 'p6N', 'pB2Ratio'];
+        normalKeys.forEach(key => {
+            const input = document.getElementById(key);
+            if (input) input.value = params[key];
+        });
+
+        if (params.currency) currentCurrency = params.currency;
+        updateCurrencyUI();
+    }
+
+    // 儲存參數
+    function saveParams() {
+        const params = { currency: currentCurrency };
+
+        const priceKeys = [
+            'eqPrice_aden', 'nPrice_aden', 'bPrice_aden', 'cPrice_aden',
+            'eqPrice_ticket', 'nPrice_ticket', 'bPrice_ticket', 'cPrice_ticket'
+        ];
+        priceKeys.forEach(key => {
+            const el = document.getElementById(key);
+            params[key] = el ? parseNumber(el.value) : 0;
+        });
+
+        const normalKeys = ['safeValue', 'p4N', 'p5N', 'p6N', 'pB2Ratio'];
+        normalKeys.forEach(key => {
+            const el = document.getElementById(key);
+            params[key] = el ? parseFloat(el.value) || 0 : 0;
+        });
+
+        localStorage.setItem('lineage_calc_params_v6', JSON.stringify(params));
+    }
+
+    // 切換幣別模式
+    function setCurrency(type) {
+        currentCurrency = type;
+        updateCurrencyUI();
+        saveAndCalculate();
+    }
+
+    function updateCurrencyUI() {
+        document.getElementById('btn-aden').classList.toggle('active', currentCurrency === 'aden');
+        document.getElementById('btn-ticket').classList.toggle('active', currentCurrency === 'ticket');
+
+        document.getElementById('aden-inputs').classList.toggle('active', currentCurrency === 'aden');
+        document.getElementById('ticket-inputs').classList.toggle('active', currentCurrency === 'ticket');
+        
+        const unitText = currentCurrency === 'aden' ? '天幣' : '銀票';
+        document.querySelectorAll('.unit-title').forEach(el => el.innerText = unitText);
+    }
+
+    function saveAndCalculate() {
+        saveParams();
+        calculate();
+    }
+
+    function formatNum(num) {
+        if (isNaN(num) || !isFinite(num)) return "無法計算";
+        return num.toLocaleString('zh-TW', {
+            minimumFractionDigits: currentCurrency === 'ticket' ? 2 : 0,
+            maximumFractionDigits: currentCurrency === 'ticket' ? 2 : 0
+        });
+    }
+
+    // 核心計算邏輯
+    function calculate() {
+        const suffix = currentCurrency === 'aden' ? '_aden' : '_ticket';
+
+        const eqP = parseNumber(document.getElementById('eqPrice' + suffix).value);
+        const nP = parseNumber(document.getElementById('nPrice' + suffix).value);
+        const bP = parseNumber(document.getElementById('bPrice' + suffix).value);
+        const cP = parseNumber(document.getElementById('cPrice' + suffix).value);
+
+        const safe = parseFloat(document.getElementById('safeValue').value) || 4;
+        
+        // 將輸入的 % 轉回 0~1 機率小數進行演算
+        const p4 = (parseFloat(document.getElementById('p4N').value) || 0) / 100;
+        const p5 = (parseFloat(document.getElementById('p5N').value) || 0) / 100;
+        const p6 = (parseFloat(document.getElementById('p6N').value) || 0) / 100;
+        const b2Ratio = (parseFloat(document.getElementById('pB2Ratio').value) || 0) / 100;
+
+        if (p4 <= 0 || p5 <= 0 || p6 <= 0) return;
+
+        // 衝到安定值成本
+        const costSafe = eqP + (safe * nP);
+        // 衝到 +3 的基礎成本
+        const costPlus3 = eqP + (3 * nP);
+
+        // --- 方案 A: 全程 防卷 ---
+        const c5_N = (costSafe + nP) / p4;
+        const c6_N = (c5_N + nP) / p5;
+        const c7_Plan1 = (c6_N + nP) / p6;
+
+        // --- 方案 B: +4 點 祝防，其餘補 防卷 ---
+        const pB4_plus2 = p4 * b2Ratio;
+        const pB4_plus1 = p4 * (1 - b2Ratio);
+
+        let c6_Plan2_base = ((costSafe + bP) - (pB4_plus1 * c5_N)) / pB4_plus2;
+        if (c6_Plan2_base < 0) c6_Plan2_base = 0;
+        const c7_Plan2 = (c6_Plan2_base + nP) / p6;
+
+        // --- 方案 C: +4 與 +5 全用 祝防 (混合方程) ---
+        const pB5_plus2 = p5 * b2Ratio;
+        const pB5_plus1 = p5 * (1 - b2Ratio);
+
+        const A = pB5_plus2 + (pB5_plus1 * p6);
+        const B_const = (pB5_plus1 * nP) + bP;
+
+        const leftSide = costSafe + bP + (pB4_plus2 * nP) + (pB4_plus1 * B_const);
+        const rightCoeff = (pB4_plus2 * p6) + (pB4_plus1 * A);
+        const c7_Plan3 = leftSide / rightCoeff;
+
+        // --- 方案 D: 先用防卷到 +5，再用祝防衝 ---
+        const c7_Plan4 = (c5_N + bP + (pB5_plus1 * nP)) / (pB5_plus2 + (pB5_plus1 * p6));
+
+        // --- 方案 E: +3 砸祝防 + 紅防歸位，+5 再用祝防 ---
+        const c5_PlanE = costPlus3 + (2 * bP) + cP;
+        const c7_Plan5 = (c5_PlanE + bP + (pB5_plus1 * nP)) / (pB5_plus2 + (pB5_plus1 * p6));
+
+        const plans = [
+            { id: 1, name: "方案 A：全用普通防卷", cost: c7_Plan1, desc: "從 +4 硬衝到 +7，最傳統穩定的點法。" },
+            { id: 2, name: "方案 B：+4 用祝防，其餘用普通防卷", cost: c7_Plan2, desc: "+4 賭跳 +6 規避 +5 高爆率階段，再用普通防卷衝 +7。" },
+            { id: 3, name: "方案 C：+4 與 +5 全用祝防", cost: c7_Plan3, desc: "+4 與 +5 均砸祝防，利用雙重跳級效益拼最省錢。" },
+            { id: 4, name: "方案 D：先防卷到 +5，再用祝防", cost: c7_Plan4, desc: "+4 用防卷衝 +5，到 +5 才使用祝防拼跳 +7 或 +6。" },
+            { id: 5, name: "方案 E：+3 砸祝防 + 紅防歸位，+5 再用祝防", cost: c7_Plan5, desc: "+3 砸祝防，若變 +4 用紅防降回 +3 重新點到 +5，再用祝防衝 +7。" }
+        ];
+
+        plans.sort((a, b) => a.cost - b.cost);
+
+        const tbody = document.getElementById('result-rows');
+        tbody.innerHTML = '';
+
+        plans.forEach((plan, index) => {
+            const tr = document.createElement('tr');
+            if (index === 0) tr.classList.add('highlight');
+
+            tr.innerHTML = `
+                <td>
+                    ${plan.name}
+                    ${index === 0 ? '<span class="badge">最省錢首選</span>' : ''}
+                </td>
+                <td>${formatNum(plan.cost)}</td>
+                <td>${plan.desc}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    window.onload = function() {
+        loadParams();
+        calculate();
+    };
+</script>
+
+</body>
+</html>
