@@ -34,6 +34,35 @@
             margin-bottom: 20px;
         }
 
+        .rate-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--accent-color);
+            border-radius: 8px;
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .rate-card label {
+            font-weight: bold;
+            color: var(--accent-color);
+            font-size: 15px;
+        }
+
+        .rate-card input {
+            width: 140px;
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: #2a2a2a;
+            color: #fff;
+            text-align: right;
+            font-size: 15px;
+            font-weight: bold;
+        }
+
         .currency-toggle {
             display: flex;
             justify-content: center;
@@ -100,7 +129,7 @@
         }
 
         .form-group input, .form-group select {
-            width: 100px;
+            width: 110px;
             padding: 6px 10px;
             border-radius: 4px;
             border: 1px solid var(--border-color);
@@ -180,6 +209,12 @@
 <div class="container">
     <h1>天堂私服 過3裝強化期望成本計算器</h1>
 
+    <!-- 匯率比值設定區 -->
+    <div class="rate-card">
+        <label for="rate">1 銀票等於幾天幣：</label>
+        <input type="text" id="rate" class="number-input" oninput="handleRateInput(this)">
+    </div>
+
     <!-- 幣別切換 -->
     <div class="currency-toggle">
         <button id="btn-aden" class="active" onclick="setCurrency('aden')">天幣模式</button>
@@ -196,25 +231,25 @@
                 <div class="form-group">
                     <label for="eqPrice_aden">裝備單價 (天幣):</label>
                     <div class="input-wrap">
-                        <input type="text" id="eqPrice_aden" class="number-input" oninput="handlePriceInput(this)">
+                        <input type="text" id="eqPrice_aden" class="number-input" oninput="handlePriceInput(this, 'aden')">
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="nPrice_aden">防卷 單價 (天幣):</label>
                     <div class="input-wrap">
-                        <input type="text" id="nPrice_aden" class="number-input" oninput="handlePriceInput(this)">
+                        <input type="text" id="nPrice_aden" class="number-input" oninput="handlePriceInput(this, 'aden')">
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="bPrice_aden">祝防 單價 (天幣):</label>
                     <div class="input-wrap">
-                        <input type="text" id="bPrice_aden" class="number-input" oninput="handlePriceInput(this)">
+                        <input type="text" id="bPrice_aden" class="number-input" oninput="handlePriceInput(this, 'aden')">
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="cPrice_aden">紅防 單價 (天幣):</label>
                     <div class="input-wrap">
-                        <input type="text" id="cPrice_aden" class="number-input" oninput="handlePriceInput(this)">
+                        <input type="text" id="cPrice_aden" class="number-input" oninput="handlePriceInput(this, 'aden')">
                     </div>
                 </div>
             </div>
@@ -224,25 +259,25 @@
                 <div class="form-group">
                     <label for="eqPrice_ticket">裝備單價 (銀票):</label>
                     <div class="input-wrap">
-                        <input type="text" id="eqPrice_ticket" class="number-input" oninput="handlePriceInput(this)">
+                        <input type="text" id="eqPrice_ticket" class="number-input" oninput="handlePriceInput(this, 'ticket')">
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="nPrice_ticket">防卷 單價 (銀票):</label>
                     <div class="input-wrap">
-                        <input type="text" id="nPrice_ticket" class="number-input" oninput="handlePriceInput(this)">
+                        <input type="text" id="nPrice_ticket" class="number-input" oninput="handlePriceInput(this, 'ticket')">
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="bPrice_ticket">祝防 單價 (銀票):</label>
                     <div class="input-wrap">
-                        <input type="text" id="bPrice_ticket" class="number-input" oninput="handlePriceInput(this)">
+                        <input type="text" id="bPrice_ticket" class="number-input" oninput="handlePriceInput(this, 'ticket')">
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="cPrice_ticket">紅防 單價 (銀票):</label>
                     <div class="input-wrap">
-                        <input type="text" id="cPrice_ticket" class="number-input" oninput="handlePriceInput(this)">
+                        <input type="text" id="cPrice_ticket" class="number-input" oninput="handlePriceInput(this, 'ticket')">
                     </div>
                 </div>
             </div>
@@ -325,8 +360,8 @@
             </tbody>
         </table>
         <div class="note">
-            * 預設強化機率已設為「N過1」邏輯：+4(25%)、+5(20%)、+6(16.67%)、+7(14.29%)、+8(12.5%)。<br>
-            * 安定 4 目標為點至 +7 (過3)；安定 6 目標為點至 +9 (過3)。
+            * 物品單價與計算結果現已全部實施「四捨五入至整數」（無小數點）。<br>
+            * 預設強化機率已設為「N過1」邏輯：+4(25%)、+5(20%)、+6(16.67%)、+7(14.29%)、+8(12.5%)。
         </div>
     </div>
 </div>
@@ -334,15 +369,17 @@
 <script>
     const defaultParams = {
         currency: 'aden',
+        rate: 2600,
+        
         eqPrice_aden: 100000,
-        nPrice_aden: 25000,
-        bPrice_aden: 700000,
-        cPrice_aden: 0,
+        nPrice_aden: 32500,
+        bPrice_aden: 1000000,
+        cPrice_aden: 100000,
 
-        eqPrice_ticket: 10,
-        nPrice_ticket: 2,
-        bPrice_ticket: 70,
-        cPrice_ticket: 0,
+        eqPrice_ticket: 38,
+        nPrice_ticket: 13,
+        bPrice_ticket: 385,
+        cPrice_ticket: 38,
 
         safeValue: "4",
         p4to5: 25,
@@ -357,25 +394,67 @@
 
     function formatThousands(val) {
         if (val === "" || val === null || val === undefined) return "";
-        const cleanNum = val.toString().replace(/,/g, '');
+        const cleanNum = Math.round(parseFloat(val.toString().replace(/,/g, '')));
         if (isNaN(cleanNum)) return "";
-        const parts = cleanNum.split('.');
-        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        return parts.join('.');
+        return cleanNum.toLocaleString('zh-TW');
     }
 
     function parseNumber(val) {
         if (!val) return 0;
         const clean = val.toString().replace(/,/g, '');
-        return parseFloat(clean) || 0;
+        return Math.round(parseFloat(clean)) || 0;
     }
 
-    function handlePriceInput(input) {
+    function handleRateInput(input) {
         const rawValue = input.value.replace(/,/g, '');
         if (!isNaN(rawValue)) {
             input.value = formatThousands(rawValue);
         }
+        syncAllCurrencies('aden');
         saveAndCalculate();
+    }
+
+    function handlePriceInput(input, sourceCurrency) {
+        const rawValue = input.value.replace(/,/g, '');
+        if (!isNaN(rawValue)) {
+            input.value = formatThousands(rawValue);
+        }
+        
+        syncPriceField(input.id, sourceCurrency);
+        saveAndCalculate();
+    }
+
+    function syncPriceField(elementId, sourceCurrency) {
+        const rate = parseNumber(document.getElementById('rate').value) || 1;
+        const keysMap = {
+            'eqPrice': ['eqPrice_aden', 'eqPrice_ticket'],
+            'nPrice': ['nPrice_aden', 'nPrice_ticket'],
+            'bPrice': ['bPrice_aden', 'bPrice_ticket'],
+            'cPrice': ['cPrice_aden', 'cPrice_ticket']
+        };
+
+        let baseKey = elementId.replace('_aden', '').replace('_ticket', '');
+        if (!keysMap[baseKey]) return;
+
+        const [adenId, ticketId] = keysMap[baseKey];
+
+        if (sourceCurrency === 'aden') {
+            const adenVal = parseNumber(document.getElementById(adenId).value);
+            const ticketVal = rate > 0 ? Math.round(adenVal / rate) : 0;
+            document.getElementById(ticketId).value = formatThousands(ticketVal);
+        } else {
+            const ticketVal = parseNumber(document.getElementById(ticketId).value);
+            const adenVal = Math.round(ticketVal * rate);
+            document.getElementById(adenId).value = formatThousands(adenVal);
+        }
+    }
+
+    function syncAllCurrencies(sourceCurrency) {
+        const priceKeys = ['eqPrice', 'nPrice', 'bPrice', 'cPrice'];
+        priceKeys.forEach(key => {
+            const id = sourceCurrency === 'aden' ? `${key}_aden` : `${key}_ticket`;
+            syncPriceField(id, sourceCurrency);
+        });
     }
 
     function toggleProbInputs() {
@@ -393,7 +472,7 @@
             targetText.innerText = "+7";
         } else {
             document.getElementById('prob-4to5').style.display = 'none';
-            document.getElementById('prob-5to6').style.display = 'none'; // 安定6內 100%
+            document.getElementById('prob-5to6').style.display = 'none';
             document.getElementById('prob-6to7').style.display = 'flex';
             document.getElementById('prob-7to8').style.display = 'flex';
             document.getElementById('prob-8to9').style.display = 'flex';
@@ -403,7 +482,7 @@
     }
 
     function loadParams() {
-        const stored = localStorage.getItem('lineage_calc_params_v9');
+        const stored = localStorage.getItem('lineage_calc_params_v13');
         let params = defaultParams;
         if (stored) {
             try {
@@ -412,6 +491,8 @@
                 params = defaultParams;
             }
         }
+
+        document.getElementById('rate').value = formatThousands(params.rate || 2600);
 
         const priceKeys = [
             'eqPrice_aden', 'nPrice_aden', 'bPrice_aden', 'cPrice_aden',
@@ -440,6 +521,8 @@
     function saveParams() {
         const params = { currency: currentCurrency };
 
+        params.rate = parseNumber(document.getElementById('rate').value);
+
         const priceKeys = [
             'eqPrice_aden', 'nPrice_aden', 'bPrice_aden', 'cPrice_aden',
             'eqPrice_ticket', 'nPrice_ticket', 'bPrice_ticket', 'cPrice_ticket'
@@ -457,7 +540,7 @@
 
         params.safeValue = document.getElementById('safeValue').value;
 
-        localStorage.setItem('lineage_calc_params_v9', JSON.stringify(params));
+        localStorage.setItem('lineage_calc_params_v13', JSON.stringify(params));
     }
 
     function setCurrency(type) {
@@ -484,10 +567,8 @@
 
     function formatNum(num) {
         if (isNaN(num) || !isFinite(num)) return "無法計算";
-        return num.toLocaleString('zh-TW', {
-            minimumFractionDigits: currentCurrency === 'ticket' ? 2 : 0,
-            maximumFractionDigits: currentCurrency === 'ticket' ? 2 : 0
-        });
+        const rounded = Math.round(num);
+        return rounded.toLocaleString('zh-TW');
     }
 
     function calculate() {
@@ -547,7 +628,7 @@
             const costPlus5 = eqP + (5 * nP);
             const costPlus6 = eqP + (6 * nP);
 
-            // 1. 全用普通防卷 (衝到 +6 無風險，+6衝+7, +7衝+8, +8衝+9)
+            // 1. 全用普通防卷
             const c7_N = (costPlus6 + nP) / p6to7;
             const c8_N = (c7_N + nP) / p7to8;
             const c9_PlanA = (c8_N + nP) / p8to9;
