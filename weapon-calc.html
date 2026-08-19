@@ -8,8 +8,7 @@
         :root {
             --bg-color: #121212;
             --card-bg: #1e1e1e;
-            --accent-color: #e74c3c; /* 武器計算器採用熱血戰鬥紅 */
-            --accent-gold: #f39c12;
+            --accent-color: #e74c3c;
             --text-color: #e0e0e0;
             --border-color: #333;
         }
@@ -255,7 +254,7 @@
                 </div>
             </div>
 
-            <!-- 銀票專用價格輸入區 -->
+            <!-- 銀票專用價格輸入區 (支援小數點後 1 位) -->
             <div id="ticket-inputs" class="currency-inputs">
                 <div class="form-group">
                     <label for="eqPrice_ticket">武器單價 (銀票):</label>
@@ -334,9 +333,9 @@
             </tbody>
         </table>
         <div class="note">
+            * 銀票單價與計算結果已支援「小數點後 1 位」輸入與呈現。<br>
             * 武器安定值固定為 6，+5 使用祝武卷為 100% 成功（50% 跳+6 / 50% 跳+7）。<br>
-            * 在 +6 以上使用祝武卷成功時只會 +1，不會再跳階。<br>
-            * 所有計算結果與物品價格已全面實施「四捨五入至整數」。
+            * 在 +6 以上使用祝武卷成功時只會 +1，不會再跳階。
         </div>
     </div>
 </div>
@@ -351,10 +350,10 @@
         bPrice_aden: 1200000,
         cPrice_aden: 100000,
 
-        eqPrice_ticket: 77,
-        nPrice_ticket: 19,
-        bPrice_ticket: 462,
-        cPrice_ticket: 38,
+        eqPrice_ticket: 76.9,
+        nPrice_ticket: 19.2,
+        bPrice_ticket: 461.5,
+        cPrice_ticket: 38.5,
 
         p6to7: 33.3,
         p7to8: 33.3,
@@ -364,40 +363,45 @@
 
     let currentCurrency = 'aden';
 
-    function formatThousands(val) {
+    function formatNumberDisplay(val, isTicket = false) {
         if (val === "" || val === null || val === undefined) return "";
-        const cleanNum = Math.round(parseFloat(val.toString().replace(/,/g, '')));
-        if (isNaN(cleanNum)) return "";
-        return cleanNum.toLocaleString('zh-TW');
+        let clean = val.toString().replace(/,/g, '');
+        if (isNaN(clean)) return "";
+        
+        if (isTicket) {
+            let num = parseFloat(clean);
+            return isNaN(num) ? "" : num.toLocaleString('zh-TW', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+        } else {
+            let num = Math.round(parseFloat(clean));
+            return isNaN(num) ? "" : num.toLocaleString('zh-TW');
+        }
     }
 
-    function parseNumber(val) {
+    function parseRawNumber(val) {
         if (!val) return 0;
-        const clean = val.toString().replace(/,/g, '');
-        return Math.round(parseFloat(clean)) || 0;
+        let clean = val.toString().replace(/,/g, '');
+        return parseFloat(clean) || 0;
     }
 
     function handleRateInput(input) {
-        const rawValue = input.value.replace(/,/g, '');
+        let rawValue = input.value.replace(/,/g, '');
         if (!isNaN(rawValue)) {
-            input.value = formatThousands(rawValue);
+            input.value = formatNumberDisplay(rawValue, false);
         }
         syncAllCurrencies('aden');
         saveAndCalculate();
     }
 
     function handlePriceInput(input, sourceCurrency) {
-        const rawValue = input.value.replace(/,/g, '');
-        if (!isNaN(rawValue)) {
-            input.value = formatThousands(rawValue);
+        let val = input.value.replace(/,/g, '');
+        if (!isNaN(val) || val.endsWith('.')) {
+            syncPriceField(input.id, sourceCurrency);
+            saveAndCalculate();
         }
-        
-        syncPriceField(input.id, sourceCurrency);
-        saveAndCalculate();
     }
 
     function syncPriceField(elementId, sourceCurrency) {
-        const rate = parseNumber(document.getElementById('rate').value) || 1;
+        const rate = parseRawNumber(document.getElementById('rate').value) || 1;
         const keysMap = {
             'eqPrice': ['eqPrice_aden', 'eqPrice_ticket'],
             'nPrice': ['nPrice_aden', 'nPrice_ticket'],
@@ -411,13 +415,13 @@
         const [adenId, ticketId] = keysMap[baseKey];
 
         if (sourceCurrency === 'aden') {
-            const adenVal = parseNumber(document.getElementById(adenId).value);
-            const ticketVal = rate > 0 ? Math.round(adenVal / rate) : 0;
-            document.getElementById(ticketId).value = formatThousands(ticketVal);
+            const adenVal = parseRawNumber(document.getElementById(adenId).value);
+            const ticketVal = rate > 0 ? (adenVal / rate).toFixed(1) : 0;
+            document.getElementById(ticketId).value = ticketVal;
         } else {
-            const ticketVal = parseNumber(document.getElementById(ticketId).value);
+            const ticketVal = parseRawNumber(document.getElementById(ticketId).value);
             const adenVal = Math.round(ticketVal * rate);
-            document.getElementById(adenId).value = formatThousands(adenVal);
+            document.getElementById(adenId).value = adenVal.toLocaleString('zh-TW');
         }
     }
 
@@ -430,7 +434,7 @@
     }
 
     function loadParams() {
-        const stored = localStorage.getItem('lineage_weapon_calc_params_v1');
+        const stored = localStorage.getItem('lineage_weapon_calc_params_v2');
         let params = defaultParams;
         if (stored) {
             try {
@@ -440,15 +444,18 @@
             }
         }
 
-        document.getElementById('rate').value = formatThousands(params.rate || 2600);
+        document.getElementById('rate').value = formatNumberDisplay(params.rate || 2600, false);
 
-        const priceKeys = [
-            'eqPrice_aden', 'nPrice_aden', 'bPrice_aden', 'cPrice_aden',
-            'eqPrice_ticket', 'nPrice_ticket', 'bPrice_ticket', 'cPrice_ticket'
-        ];
-        priceKeys.forEach(key => {
+        const priceKeysAden = ['eqPrice_aden', 'nPrice_aden', 'bPrice_aden', 'cPrice_aden'];
+        priceKeysAden.forEach(key => {
             const input = document.getElementById(key);
-            if (input) input.value = formatThousands(params[key]);
+            if (input) input.value = formatNumberDisplay(params[key], false);
+        });
+
+        const priceKeysTicket = ['eqPrice_ticket', 'nPrice_ticket', 'bPrice_ticket', 'cPrice_ticket'];
+        priceKeysTicket.forEach(key => {
+            const input = document.getElementById(key);
+            if (input) input.value = parseFloat(params[key]).toFixed(1);
         });
 
         const normalKeys = ['p6to7', 'p7to8', 'p8to9', 'pB2Ratio'];
@@ -464,15 +471,18 @@
     function saveParams() {
         const params = { currency: currentCurrency };
 
-        params.rate = parseNumber(document.getElementById('rate').value);
+        params.rate = parseRawNumber(document.getElementById('rate').value);
 
-        const priceKeys = [
-            'eqPrice_aden', 'nPrice_aden', 'bPrice_aden', 'cPrice_aden',
-            'eqPrice_ticket', 'nPrice_ticket', 'bPrice_ticket', 'cPrice_ticket'
-        ];
-        priceKeys.forEach(key => {
+        const priceKeysAden = ['eqPrice_aden', 'nPrice_aden', 'bPrice_aden', 'cPrice_aden'];
+        priceKeysAden.forEach(key => {
             const el = document.getElementById(key);
-            params[key] = el ? parseNumber(el.value) : 0;
+            params[key] = el ? parseRawNumber(el.value) : 0;
+        });
+
+        const priceKeysTicket = ['eqPrice_ticket', 'nPrice_ticket', 'bPrice_ticket', 'cPrice_ticket'];
+        priceKeysTicket.forEach(key => {
+            const el = document.getElementById(key);
+            params[key] = el ? parseFloat(parseRawNumber(el.value).toFixed(1)) : 0;
         });
 
         const normalKeys = ['p6to7', 'p7to8', 'p8to9', 'pB2Ratio'];
@@ -481,7 +491,7 @@
             params[key] = el ? parseFloat(el.value) || 0 : 0;
         });
 
-        localStorage.setItem('lineage_weapon_calc_params_v1', JSON.stringify(params));
+        localStorage.setItem('lineage_weapon_calc_params_v2', JSON.stringify(params));
     }
 
     function setCurrency(type) {
@@ -508,17 +518,20 @@
 
     function formatNum(num) {
         if (isNaN(num) || !isFinite(num)) return "無法計算";
-        const rounded = Math.round(num);
-        return rounded.toLocaleString('zh-TW');
+        if (currentCurrency === 'ticket') {
+            return num.toLocaleString('zh-TW', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+        } else {
+            return Math.round(num).toLocaleString('zh-TW');
+        }
     }
 
     function calculate() {
         const suffix = currentCurrency === 'aden' ? '_aden' : '_ticket';
 
-        const eqP = parseNumber(document.getElementById('eqPrice' + suffix).value);
-        const nP = parseNumber(document.getElementById('nPrice' + suffix).value);
-        const bP = parseNumber(document.getElementById('bPrice' + suffix).value);
-        const cP = parseNumber(document.getElementById('cPrice' + suffix).value);
+        const eqP = parseRawNumber(document.getElementById('eqPrice' + suffix).value);
+        const nP = parseRawNumber(document.getElementById('nPrice' + suffix).value);
+        const bP = parseRawNumber(document.getElementById('bPrice' + suffix).value);
+        const cP = parseRawNumber(document.getElementById('cPrice' + suffix).value);
 
         const p6to7 = (parseFloat(document.getElementById('p6to7').value) || 0) / 100;
         const p7to8 = (parseFloat(document.getElementById('p7to8').value) || 0) / 100;
@@ -527,39 +540,27 @@
 
         if (p6to7 <= 0 || p7to8 <= 0 || p8to9 <= 0) return;
 
-        // 安定範圍基礎成本 (+5 與 +6)
         const costPlus5 = eqP + (5 * nP);
         const costPlus6 = eqP + (6 * nP);
 
-        // ----------------------------------------------------
         // 方案 A：全程普通武卷
-        // ----------------------------------------------------
         const c7_PlanA = (costPlus6 + nP) / p6to7;
         const c8_PlanA = (c7_PlanA + nP) / p7to8;
         const c9_PlanA = (c8_PlanA + nP) / p8to9;
 
-        // ----------------------------------------------------
-        // 方案 B：+5 砸祝武卷（50% 跳+7，50% 變+6 補普通武卷）
-        // ----------------------------------------------------
+        // 方案 B：+5 砸祝武卷（跳+7 或跳+6 補普通武卷）
         const pB_jump2 = b2Ratio;
         const pB_jump1 = 1 - b2Ratio;
-        // 方程式: costPlus5 + bP = pB_jump2 * C7 + pB_jump1 * (p6to7 * C7 - nP)
         const c7_PlanB_base = (costPlus5 + bP + (pB_jump1 * nP)) / (pB_jump2 + (pB_jump1 * p6to7));
         const c8_PlanB = (c7_PlanB_base + nP) / p7to8;
         const c9_PlanB = (c8_PlanB + nP) / p8to9;
 
-        // ----------------------------------------------------
-        // 方案 C：+5 砸祝武卷 + 紅武卷歸位循環（直到跳+7為止）
-        // ----------------------------------------------------
-        // 在 +5 點祝武卷 100% 成功: 50% 變 +7, 50% 變 +6 (用紅武卷降回 +5 再點)
-        // 產出一件 +7 武器的期望成本:
+        // 方案 C：+5 砸祝武卷 + 紅武卷歸位循環（直達+7）
         const c7_PlanC = costPlus5 + (bP + pB_jump1 * cP) / pB_jump2;
         const c8_PlanC = (c7_PlanC + nP) / p7to8;
         const c9_PlanC = (c8_PlanC + nP) / p8to9;
 
-        // ----------------------------------------------------
-        // 方案 D：+5 砸祝武卷，只賭 50% 直接跳 +7（變 +6 則停手不補卷）
-        // ----------------------------------------------------
+        // 方案 D：+5 砸祝武卷（只賭 50% 爆升 +7）
         const c7_PlanD = (costPlus5 + bP) / pB_jump2;
         const c8_PlanD = (c7_PlanD + nP) / p7to8;
         const c9_PlanD = (c8_PlanD + nP) / p8to9;

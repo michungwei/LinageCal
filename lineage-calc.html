@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>天堂私服 - 過3裝強化期望成本計算器</title>
+    <title>天堂私服 - 防具過3裝強化期望成本計算器</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -207,7 +207,7 @@
 <body>
 
 <div class="container">
-    <h1>天堂私服 過3裝強化期望成本計算器</h1>
+    <h1>天堂私服 防具過3裝強化期望成本計算器</h1>
 
     <!-- 匯率比值設定區 -->
     <div class="rate-card">
@@ -229,7 +229,7 @@
             <!-- 天幣專用價格輸入區 -->
             <div id="aden-inputs" class="currency-inputs active">
                 <div class="form-group">
-                    <label for="eqPrice_aden">裝備單價 (天幣):</label>
+                    <label for="eqPrice_aden">防具單價 (天幣):</label>
                     <div class="input-wrap">
                         <input type="text" id="eqPrice_aden" class="number-input" oninput="handlePriceInput(this, 'aden')">
                     </div>
@@ -254,10 +254,10 @@
                 </div>
             </div>
 
-            <!-- 銀票專用價格輸入區 -->
+            <!-- 銀票專用價格輸入區 (支援小數點後 1 位) -->
             <div id="ticket-inputs" class="currency-inputs">
                 <div class="form-group">
-                    <label for="eqPrice_ticket">裝備單價 (銀票):</label>
+                    <label for="eqPrice_ticket">防具單價 (銀票):</label>
                     <div class="input-wrap">
                         <input type="text" id="eqPrice_ticket" class="number-input" oninput="handlePriceInput(this, 'ticket')">
                     </div>
@@ -360,8 +360,8 @@
             </tbody>
         </table>
         <div class="note">
-            * 已修正規則：祝防在 +5 時成功仍有機會跳 +2 直達 +7，但在 +6 以上成功時 100% 固定只會 +1。<br>
-            * 預設強化機率已設為「N過1」邏輯：+4(25%)、+5(20%)、+6(16.67%)、+7(14.29%)、+8(12.5%)。
+            * 銀票單價與計算結果已支援「小數點後 1 位」輸入與呈現。<br>
+            * 祝防在 +5 時成功仍有機會跳 +2 直達 +7，但在 +6 以上成功時 100% 固定只會 +1。
         </div>
     </div>
 </div>
@@ -376,10 +376,10 @@
         bPrice_aden: 1000000,
         cPrice_aden: 100000,
 
-        eqPrice_ticket: 38,
-        nPrice_ticket: 13,
-        bPrice_ticket: 385,
-        cPrice_ticket: 38,
+        eqPrice_ticket: 38.5,
+        nPrice_ticket: 12.5,
+        bPrice_ticket: 384.6,
+        cPrice_ticket: 38.5,
 
         safeValue: "4",
         p4to5: 25,
@@ -392,40 +392,46 @@
 
     let currentCurrency = 'aden';
 
-    function formatThousands(val) {
+    function formatNumberDisplay(val, isTicket = false) {
         if (val === "" || val === null || val === undefined) return "";
-        const cleanNum = Math.round(parseFloat(val.toString().replace(/,/g, '')));
-        if (isNaN(cleanNum)) return "";
-        return cleanNum.toLocaleString('zh-TW');
+        let clean = val.toString().replace(/,/g, '');
+        if (isNaN(clean)) return "";
+        
+        if (isTicket) {
+            let num = parseFloat(clean);
+            return isNaN(num) ? "" : num.toLocaleString('zh-TW', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+        } else {
+            let num = Math.round(parseFloat(clean));
+            return isNaN(num) ? "" : num.toLocaleString('zh-TW');
+        }
     }
 
-    function parseNumber(val) {
+    function parseRawNumber(val) {
         if (!val) return 0;
-        const clean = val.toString().replace(/,/g, '');
-        return Math.round(parseFloat(clean)) || 0;
+        let clean = val.toString().replace(/,/g, '');
+        return parseFloat(clean) || 0;
     }
 
     function handleRateInput(input) {
-        const rawValue = input.value.replace(/,/g, '');
+        let rawValue = input.value.replace(/,/g, '');
         if (!isNaN(rawValue)) {
-            input.value = formatThousands(rawValue);
+            input.value = formatNumberDisplay(rawValue, false);
         }
         syncAllCurrencies('aden');
         saveAndCalculate();
     }
 
     function handlePriceInput(input, sourceCurrency) {
-        const rawValue = input.value.replace(/,/g, '');
-        if (!isNaN(rawValue)) {
-            input.value = formatThousands(rawValue);
+        let val = input.value.replace(/,/g, '');
+        // 允許輸入小數點的即時響應
+        if (!isNaN(val) || val.endsWith('.')) {
+            syncPriceField(input.id, sourceCurrency);
+            saveAndCalculate();
         }
-        
-        syncPriceField(input.id, sourceCurrency);
-        saveAndCalculate();
     }
 
     function syncPriceField(elementId, sourceCurrency) {
-        const rate = parseNumber(document.getElementById('rate').value) || 1;
+        const rate = parseRawNumber(document.getElementById('rate').value) || 1;
         const keysMap = {
             'eqPrice': ['eqPrice_aden', 'eqPrice_ticket'],
             'nPrice': ['nPrice_aden', 'nPrice_ticket'],
@@ -439,13 +445,13 @@
         const [adenId, ticketId] = keysMap[baseKey];
 
         if (sourceCurrency === 'aden') {
-            const adenVal = parseNumber(document.getElementById(adenId).value);
-            const ticketVal = rate > 0 ? Math.round(adenVal / rate) : 0;
-            document.getElementById(ticketId).value = formatThousands(ticketVal);
+            const adenVal = parseRawNumber(document.getElementById(adenId).value);
+            const ticketVal = rate > 0 ? (adenVal / rate).toFixed(1) : 0;
+            document.getElementById(ticketId).value = ticketVal;
         } else {
-            const ticketVal = parseNumber(document.getElementById(ticketId).value);
+            const ticketVal = parseRawNumber(document.getElementById(ticketId).value);
             const adenVal = Math.round(ticketVal * rate);
-            document.getElementById(adenId).value = formatThousands(adenVal);
+            document.getElementById(adenId).value = adenVal.toLocaleString('zh-TW');
         }
     }
 
@@ -482,7 +488,7 @@
     }
 
     function loadParams() {
-        const stored = localStorage.getItem('lineage_calc_params_v17');
+        const stored = localStorage.getItem('lineage_calc_params_v18');
         let params = defaultParams;
         if (stored) {
             try {
@@ -492,15 +498,18 @@
             }
         }
 
-        document.getElementById('rate').value = formatThousands(params.rate || 2600);
+        document.getElementById('rate').value = formatNumberDisplay(params.rate || 2600, false);
 
-        const priceKeys = [
-            'eqPrice_aden', 'nPrice_aden', 'bPrice_aden', 'cPrice_aden',
-            'eqPrice_ticket', 'nPrice_ticket', 'bPrice_ticket', 'cPrice_ticket'
-        ];
-        priceKeys.forEach(key => {
+        const priceKeysAden = ['eqPrice_aden', 'nPrice_aden', 'bPrice_aden', 'cPrice_aden'];
+        priceKeysAden.forEach(key => {
             const input = document.getElementById(key);
-            if (input) input.value = formatThousands(params[key]);
+            if (input) input.value = formatNumberDisplay(params[key], false);
+        });
+
+        const priceKeysTicket = ['eqPrice_ticket', 'nPrice_ticket', 'bPrice_ticket', 'cPrice_ticket'];
+        priceKeysTicket.forEach(key => {
+            const input = document.getElementById(key);
+            if (input) input.value = parseFloat(params[key]).toFixed(1);
         });
 
         const normalKeys = ['p4to5', 'p5to6', 'p6to7', 'p7to8', 'p8to9', 'pB2Ratio'];
@@ -521,15 +530,18 @@
     function saveParams() {
         const params = { currency: currentCurrency };
 
-        params.rate = parseNumber(document.getElementById('rate').value);
+        params.rate = parseRawNumber(document.getElementById('rate').value);
 
-        const priceKeys = [
-            'eqPrice_aden', 'nPrice_aden', 'bPrice_aden', 'cPrice_aden',
-            'eqPrice_ticket', 'nPrice_ticket', 'bPrice_ticket', 'cPrice_ticket'
-        ];
-        priceKeys.forEach(key => {
+        const priceKeysAden = ['eqPrice_aden', 'nPrice_aden', 'bPrice_aden', 'cPrice_aden'];
+        priceKeysAden.forEach(key => {
             const el = document.getElementById(key);
-            params[key] = el ? parseNumber(el.value) : 0;
+            params[key] = el ? parseRawNumber(el.value) : 0;
+        });
+
+        const priceKeysTicket = ['eqPrice_ticket', 'nPrice_ticket', 'bPrice_ticket', 'cPrice_ticket'];
+        priceKeysTicket.forEach(key => {
+            const el = document.getElementById(key);
+            params[key] = el ? parseFloat(parseRawNumber(el.value).toFixed(1)) : 0;
         });
 
         const normalKeys = ['p4to5', 'p5to6', 'p6to7', 'p7to8', 'p8to9', 'pB2Ratio'];
@@ -540,7 +552,7 @@
 
         params.safeValue = document.getElementById('safeValue').value;
 
-        localStorage.setItem('lineage_calc_params_v17', JSON.stringify(params));
+        localStorage.setItem('lineage_calc_params_v18', JSON.stringify(params));
     }
 
     function setCurrency(type) {
@@ -567,17 +579,20 @@
 
     function formatNum(num) {
         if (isNaN(num) || !isFinite(num)) return "無法計算";
-        const rounded = Math.round(num);
-        return rounded.toLocaleString('zh-TW');
+        if (currentCurrency === 'ticket') {
+            return num.toLocaleString('zh-TW', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+        } else {
+            return Math.round(num).toLocaleString('zh-TW');
+        }
     }
 
     function calculate() {
         const suffix = currentCurrency === 'aden' ? '_aden' : '_ticket';
 
-        const eqP = parseNumber(document.getElementById('eqPrice' + suffix).value);
-        const nP = parseNumber(document.getElementById('nPrice' + suffix).value);
-        const bP = parseNumber(document.getElementById('bPrice' + suffix).value);
-        const cP = parseNumber(document.getElementById('cPrice' + suffix).value);
+        const eqP = parseRawNumber(document.getElementById('eqPrice' + suffix).value);
+        const nP = parseRawNumber(document.getElementById('nPrice' + suffix).value);
+        const bP = parseRawNumber(document.getElementById('bPrice' + suffix).value);
+        const cP = parseRawNumber(document.getElementById('cPrice' + suffix).value);
 
         const safeMode = document.getElementById('safeValue').value;
 
@@ -591,36 +606,29 @@
         let plans = [];
 
         if (safeMode === "4") {
-            // === 安定 4 (目標 +7) ===
             if (p4to5 <= 0 || p5to6 <= 0 || p6to7 <= 0) return;
 
             const costSafe = eqP + (4 * nP);
             const costPlus3 = eqP + (3 * nP);
 
-            // 基礎成本：純用普通防卷到 +5 與 +6
             const c5_N = (costSafe + nP) / p4to5;
             const c6_N = (c5_N + nP) / p5to6;
 
-            // 1. 全用普通防卷 (方案 A)
             const c7_PlanA = (c6_N + nP) / p6to7;
 
-            // 2. +4 點祝防，其餘補普通防卷 (方案 B)
             const pB4_plus2 = p4to5 * b2Ratio;
             const pB4_plus1 = p4to5 * (1 - b2Ratio);
             let c6_PlanB_base = ((costSafe + bP) - (pB4_plus1 * c5_N)) / pB4_plus2;
             if (c6_PlanB_base < 0) c6_PlanB_base = 0;
             const c7_PlanB = (c6_PlanB_base + nP) / p6to7;
 
-            // 3. 先普通防卷到 +5，再用祝防衝 (方案 D) - +5 祝防可跳 +2 直達 +7
             const pB5_plus2 = p5to6 * b2Ratio;
             const pB5_plus1 = p5to6 * (1 - b2Ratio);
             const c7_PlanD = (c5_N + bP + (pB5_plus1 * nP)) / (pB5_plus2 + (pB5_plus1 * p6to7));
 
-            // 4. +3 砸祝防 + 紅防歸位，+5 再用祝防 (方案 C)
             const c5_PlanC = costPlus3 + (2 * bP) + cP;
             const c7_PlanC = (c5_PlanC + bP + (pB5_plus1 * nP)) / (pB5_plus2 + (pB5_plus1 * p6to7));
 
-            // 5. +3 砸祝防，變 +4 補普通防卷衝 +5，+5 再砸祝防 (方案 E2)
             const c5_E2 = costPlus3 + bP + (0.5 * c5_N);
             const c7_PlanE2 = (c5_E2 + bP + (pB5_plus1 * nP)) / (pB5_plus2 + (pB5_plus1 * p6to7));
 
@@ -628,23 +636,20 @@
                 { name: "方案 D：先用普通防卷衝 +5，+5 再砸祝防", cost: c7_PlanD, desc: "+5 砸祝防，10% 機率直接跳 +7，10% 跳 +6 補普通防卷衝 +7。" },
                 { name: "方案 B：+4 砸祝防，其餘用普通防卷", cost: c7_PlanB, desc: "+4 砸祝防賭 50% 跳 +6 避開高爆率階段，過安定後全補普通防卷。" },
                 { name: "方案 E2：+3 砸祝防，+4 補防卷衝 +5，+5 再砸祝防", cost: c7_PlanE2, desc: "+3 砸祝防，變 +4 補普通防卷硬衝 +5，+5 再用祝防衝 +7。" },
-                { name: "方案 C：+3 砸祝防 + 紅防歸位，+5 再砸祝防", cost: c7_PlanC, desc: "+3 砸祝防，若變 +4 用紅防退回 +3 重點到 +5，+5 再用祝防衝 +7。" },
+                { name: "方案 C：+3 砸祝防 + 紅防歸位，+5 再用祝防", cost: c7_PlanC, desc: "+3 砸祝防，若變 +4 用紅防退回 +3 重點到 +5，+5 再用祝防衝 +7。" },
                 { name: "方案 A：全用普通防卷硬衝", cost: c7_PlanA, desc: "從 +4 一路硬衝到 +7，最傳統穩定的點法。" }
             ];
 
         } else {
-            // === 安定 6 (目標 +9) ===
             if (p6to7 <= 0 || p7to8 <= 0 || p8to9 <= 0) return;
 
             const costPlus5 = eqP + (5 * nP);
             const costPlus6 = eqP + (6 * nP);
 
-            // 1. 全用普通防卷
             const c7_N = (costPlus6 + nP) / p6to7;
             const c8_N = (c7_N + nP) / p7to8;
             const c9_PlanA = (c8_N + nP) / p8to9;
 
-            // 2. +5 點祝防衝 +7，後續補普通防卷至 +9
             const pB_jump2 = b2Ratio;
             const pB_jump1 = 1 - b2Ratio;
             const c7_PlanB_base = (costPlus5 + bP + (pB_jump1 * nP)) / (pB_jump2 + (pB_jump1 * p6to7));
