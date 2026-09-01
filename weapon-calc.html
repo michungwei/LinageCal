@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>天堂私服 - 武器+9(過3)強化期望成本計算器</title>
+    <title>天堂私服 - 武器+9/+10(過3/過4)強化期望成本計算器</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -128,7 +128,7 @@
             gap: 5px;
         }
 
-        .form-group input {
+        .form-group input, .form-group select {
             width: 110px;
             padding: 6px 10px;
             border-radius: 4px;
@@ -207,7 +207,7 @@
 <body>
 
 <div class="container">
-    <h1>天堂私服 武器+9 (過3) 強化期望成本計算器</h1>
+    <h1>天堂私服 武器過3/過4強化期望成本計算器</h1>
 
     <!-- 匯率比值設定區 -->
     <div class="rate-card">
@@ -254,7 +254,7 @@
                 </div>
             </div>
 
-            <!-- 銀票專用價格輸入區 (支援小數點後 1 位) -->
+            <!-- 銀票專用價格輸入區 -->
             <div id="ticket-inputs" class="currency-inputs">
                 <div class="form-group">
                     <label for="eqPrice_ticket">武器單價 (銀票):</label>
@@ -285,7 +285,18 @@
 
         <!-- 成功機率設定 -->
         <div class="card">
-            <h2>強化成功率與設定 (安定 6 目標 +9)</h2>
+            <h2>強化設定與機率 (安定 6)</h2>
+            <div class="form-group">
+                <label for="targetMode">強化目標階級:</label>
+                <div class="input-wrap">
+                    <select id="targetMode" onchange="toggleProbInputs(); saveAndCalculate();">
+                        <option value="over3">目標 +9 (過3裝)</option>
+                        <option value="over4">目標 +10 (過4裝)</option>
+                    </select>
+                    <span class="unit-symbol"></span>
+                </div>
+            </div>
+
             <div class="form-group">
                 <label for="p6to7">+6 升 +7 成功率 (33.3%):</label>
                 <div class="input-wrap">
@@ -307,6 +318,13 @@
                     <span class="unit-symbol">%</span>
                 </div>
             </div>
+            <div id="prob-9to10" class="form-group">
+                <label for="p9to10">+9 升 +10 成功率 (33.3%):</label>
+                <div class="input-wrap">
+                    <input type="number" id="p9to10" step="0.1" value="33.3" oninput="saveAndCalculate()">
+                    <span class="unit-symbol">%</span>
+                </div>
+            </div>
             <div class="form-group">
                 <label for="pB2Ratio">+5 祝武卷跳+2佔比:</label>
                 <div class="input-wrap">
@@ -319,12 +337,12 @@
 
     <!-- 計算結果展示 -->
     <div class="results">
-        <h2>強化方案成本比較 (目標 +9 武器)</h2>
+        <h2>強化方案成本比較 (<span id="target-title">目標 +9 武器</span>)</h2>
         <table>
             <thead>
                 <tr>
                     <th>強化方案策略描述</th>
-                    <th>+9 期望總成本 (<span class="unit-title">天幣</span>)</th>
+                    <th><span id="target-text">+9</span> 期望總成本 (<span class="unit-title">天幣</span>)</th>
                     <th>說明</th>
                 </tr>
             </thead>
@@ -333,9 +351,9 @@
             </tbody>
         </table>
         <div class="note">
-            * 銀票單價與計算結果已支援「小數點後 1 位」輸入與呈現。<br>
-            * 武器安定值固定為 6，+5 使用祝武卷為 100% 成功（50% 跳+6 / 50% 跳+7）。<br>
-            * 在 +6 以上使用祝武卷成功時只會 +1，不會再跳階。
+            * 武器安定值固定為 6，+5 使用祝武卷 100% 成功（50% 跳+6 / 50% 跳+7）。<br>
+            * 在 +6 以上使用祝武卷成功時只會 +1，不會再跳階。<br>
+            * 支援「過3裝 (+9)」與「過4裝 (+10)」切換計算。
         </div>
     </div>
 </div>
@@ -355,9 +373,11 @@
         bPrice_ticket: 461.5,
         cPrice_ticket: 38.5,
 
+        targetMode: "over3",
         p6to7: 33.3,
         p7to8: 33.3,
         p8to9: 33.3,
+        p9to10: 33.3,
         pB2Ratio: 50
     };
 
@@ -433,8 +453,24 @@
         });
     }
 
+    function toggleProbInputs() {
+        const targetMode = document.getElementById('targetMode').value;
+        const targetTitle = document.getElementById('target-title');
+        const targetText = document.getElementById('target-text');
+
+        if (targetMode === 'over3') {
+            document.getElementById('prob-9to10').style.display = 'none';
+            targetTitle.innerText = "目標 +9 武器 (過3裝)";
+            targetText.innerText = "+9";
+        } else {
+            document.getElementById('prob-9to10').style.display = 'flex';
+            targetTitle.innerText = "目標 +10 武器 (過4裝)";
+            targetText.innerText = "+10";
+        }
+    }
+
     function loadParams() {
-        const stored = localStorage.getItem('lineage_weapon_calc_params_v2');
+        const stored = localStorage.getItem('lineage_weapon_calc_params_v20');
         let params = defaultParams;
         if (stored) {
             try {
@@ -458,13 +494,18 @@
             if (input) input.value = parseFloat(params[key]).toFixed(1);
         });
 
-        const normalKeys = ['p6to7', 'p7to8', 'p8to9', 'pB2Ratio'];
+        const normalKeys = ['p6to7', 'p7to8', 'p8to9', 'p9to10', 'pB2Ratio'];
         normalKeys.forEach(key => {
             const input = document.getElementById(key);
-            if (input) input.value = params[key];
+            if (input) input.value = params[key] !== undefined ? params[key] : defaultParams[key];
         });
 
+        const targetSelect = document.getElementById('targetMode');
+        if (targetSelect) targetSelect.value = params.targetMode || "over3";
+
         if (params.currency) currentCurrency = params.currency;
+        
+        toggleProbInputs();
         updateCurrencyUI();
     }
 
@@ -485,13 +526,15 @@
             params[key] = el ? parseFloat(parseRawNumber(el.value).toFixed(1)) : 0;
         });
 
-        const normalKeys = ['p6to7', 'p7to8', 'p8to9', 'pB2Ratio'];
+        const normalKeys = ['p6to7', 'p7to8', 'p8to9', 'p9to10', 'pB2Ratio'];
         normalKeys.forEach(key => {
             const el = document.getElementById(key);
             params[key] = el ? parseFloat(el.value) || 0 : 0;
         });
 
-        localStorage.setItem('lineage_weapon_calc_params_v2', JSON.stringify(params));
+        params.targetMode = document.getElementById('targetMode').value;
+
+        localStorage.setItem('lineage_weapon_calc_params_v20', JSON.stringify(params));
     }
 
     function setCurrency(type) {
@@ -533,12 +576,16 @@
         const bP = parseRawNumber(document.getElementById('bPrice' + suffix).value);
         const cP = parseRawNumber(document.getElementById('cPrice' + suffix).value);
 
+        const targetMode = document.getElementById('targetMode').value;
+
         const p6to7 = (parseFloat(document.getElementById('p6to7').value) || 0) / 100;
         const p7to8 = (parseFloat(document.getElementById('p7to8').value) || 0) / 100;
         const p8to9 = (parseFloat(document.getElementById('p8to9').value) || 0) / 100;
+        const p9to10 = (parseFloat(document.getElementById('p9to10').value) || 0) / 100;
         const b2Ratio = (parseFloat(document.getElementById('pB2Ratio').value) || 0) / 100;
 
         if (p6to7 <= 0 || p7to8 <= 0 || p8to9 <= 0) return;
+        if (targetMode === "over4" && p9to10 <= 0) return;
 
         const costPlus5 = eqP + (5 * nP);
         const costPlus6 = eqP + (6 * nP);
@@ -547,6 +594,7 @@
         const c7_PlanA = (costPlus6 + nP) / p6to7;
         const c8_PlanA = (c7_PlanA + nP) / p7to8;
         const c9_PlanA = (c8_PlanA + nP) / p8to9;
+        const final_PlanA = targetMode === "over3" ? c9_PlanA : (c9_PlanA + nP) / p9to10;
 
         // 方案 B：+5 砸祝武卷（跳+7 或跳+6 補普通武卷）
         const pB_jump2 = b2Ratio;
@@ -554,22 +602,27 @@
         const c7_PlanB_base = (costPlus5 + bP + (pB_jump1 * nP)) / (pB_jump2 + (pB_jump1 * p6to7));
         const c8_PlanB = (c7_PlanB_base + nP) / p7to8;
         const c9_PlanB = (c8_PlanB + nP) / p8to9;
+        const final_PlanB = targetMode === "over3" ? c9_PlanB : (c9_PlanB + nP) / p9to10;
 
         // 方案 C：+5 砸祝武卷 + 紅武卷歸位循環（直達+7）
         const c7_PlanC = costPlus5 + (bP + pB_jump1 * cP) / pB_jump2;
         const c8_PlanC = (c7_PlanC + nP) / p7to8;
         const c9_PlanC = (c8_PlanC + nP) / p8to9;
+        const final_PlanC = targetMode === "over3" ? c9_PlanC : (c9_PlanC + nP) / p9to10;
 
         // 方案 D：+5 砸祝武卷（只賭 50% 爆升 +7）
         const c7_PlanD = (costPlus5 + bP) / pB_jump2;
         const c8_PlanD = (c7_PlanD + nP) / p7to8;
         const c9_PlanD = (c8_PlanD + nP) / p8to9;
+        const final_PlanD = targetMode === "over3" ? c9_PlanD : (c9_PlanD + nP) / p9to10;
+
+        const tName = targetMode === "over3" ? "+9" : "+10";
 
         const plans = [
-            { name: "方案 B：+5 砸祝武卷（跳+7 或跳+6 補普通武卷）", cost: c9_PlanB, desc: "+5 砸祝武卷 100% 不爆！50% 直達 +7，若只跳 +6 則補普通武卷衝至 +9。" },
-            { name: "方案 C：+5 砸祝武卷 + 紅武卷歸位（直達+7）", cost: c9_PlanC, desc: "+5 砸祝武卷，若只變 +6 則用紅武卷降回 +5 重點，直到跳 +7 再補武卷衝 +9。" },
-            { name: "方案 D：+5 砸祝武卷（只賭 50% 爆升 +7）", cost: c9_PlanD, desc: "+5 砸祝武卷純賭跳 +2 直接獲得 +7，後續補普通武卷衝至 +9。" },
-            { name: "方案 A：全用普通武卷硬衝", cost: c9_PlanA, desc: "一路點到 +6，之後全用普通武卷賭 33.3% 成功率硬衝到 +9。" }
+            { name: `方案 B：+5 砸祝武卷（跳+7 或跳+6 補普通武卷）`, cost: final_PlanB, desc: `+5 砸祝武卷 100% 不爆！50% 直達 +7，若只跳 +6 則補普通武卷衝至 ${tName}。` },
+            { name: `方案 C：+5 砸祝武卷 + 紅武卷歸位（直達+7）`, cost: final_PlanC, desc: `+5 砸祝武卷，若只變 +6 則用紅武卷降回 +5 重點，直到跳 +7 再補武卷衝 ${tName}。` },
+            { name: `方案 D：+5 砸祝武卷（只賭 50% 爆升 +7）`, cost: final_PlanD, desc: `+5 砸祝武卷純賭跳 +2 直接獲得 +7，後續補普通武卷衝至 ${tName}。` },
+            { name: `方案 A：全用普通武卷硬衝`, cost: final_PlanA, desc: `一路點到 +6，之後全用普通武卷賭成功率硬衝到 ${tName}。` }
         ];
 
         plans.sort((a, b) => a.cost - b.cost);

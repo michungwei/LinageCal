@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>天堂私服 - 防具過3裝強化期望成本計算器</title>
+    <title>天堂私服 - 防具過3/過4強化期望成本計算器</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -207,7 +207,7 @@
 <body>
 
 <div class="container">
-    <h1>天堂私服 防具過3裝強化期望成本計算器</h1>
+    <h1>天堂私服 防具強化期望成本計算器</h1>
 
     <!-- 匯率比值設定區 -->
     <div class="rate-card">
@@ -254,7 +254,7 @@
                 </div>
             </div>
 
-            <!-- 銀票專用價格輸入區 (支援小數點後 1 位) -->
+            <!-- 銀票專用價格輸入區 -->
             <div id="ticket-inputs" class="currency-inputs">
                 <div class="form-group">
                     <label for="eqPrice_ticket">防具單價 (銀票):</label>
@@ -283,21 +283,31 @@
             </div>
         </div>
 
-        <!-- 成功機率與安定值設定 -->
+        <!-- 成功機率與強化目標設定 -->
         <div class="card">
-            <h2>強化成功率與設定</h2>
+            <h2>強化設定與機率</h2>
             <div class="form-group">
                 <label for="safeValue">裝備安定值:</label>
                 <div class="input-wrap">
-                    <select id="safeValue" onchange="toggleProbInputs(); saveAndCalculate();">
-                        <option value="4">安定 4 (目標 +7)</option>
-                        <option value="6">安定 6 (目標 +9)</option>
+                    <select id="safeValue" onchange="updateTargetOptions(); toggleProbInputs(); saveAndCalculate();">
+                        <option value="4">安定 4</option>
+                        <option value="6">安定 6</option>
                     </select>
                     <span class="unit-symbol"></span>
                 </div>
             </div>
 
-            <!-- 各階成功率欄位 -->
+            <div class="form-group">
+                <label for="targetMode">強化目標階級:</label>
+                <div class="input-wrap">
+                    <select id="targetMode" onchange="toggleProbInputs(); saveAndCalculate();">
+                        <!-- 動態填入過3或過4選項 -->
+                    </select>
+                    <span class="unit-symbol"></span>
+                </div>
+            </div>
+
+            <!-- 安定 4 機率輸入區 -->
             <div id="prob-4to5" class="form-group">
                 <label for="p4to5">+4 升 +5 成功率 (4過1):</label>
                 <div class="input-wrap">
@@ -326,10 +336,19 @@
                     <span class="unit-symbol">%</span>
                 </div>
             </div>
+
+            <!-- 安定 6 機率輸入區 -->
             <div id="prob-8to9" class="form-group">
                 <label for="p8to9">+8 升 +9 成功率 (8過1):</label>
                 <div class="input-wrap">
                     <input type="number" id="p8to9" step="0.01" value="12.5" oninput="saveAndCalculate()">
+                    <span class="unit-symbol">%</span>
+                </div>
+            </div>
+            <div id="prob-9to10" class="form-group">
+                <label for="p9to10">+9 升 +10 成功率 (10過1):</label>
+                <div class="input-wrap">
+                    <input type="number" id="p9to10" step="0.01" value="10.0" oninput="saveAndCalculate()">
                     <span class="unit-symbol">%</span>
                 </div>
             </div>
@@ -360,8 +379,8 @@
             </tbody>
         </table>
         <div class="note">
-            * 銀票單價與計算結果已支援「小數點後 1 位」輸入與呈現。<br>
-            * 祝防在 +5 時成功仍有機會跳 +2 直達 +7，但在 +6 以上成功時 100% 固定只會 +1。
+            * 支援「過3裝」與「過4裝」目標切換；銀票單價支援小數點後 1 位。<br>
+            * 祝防在 +5 含以下成功時有機會跳 +2，+6 以上成功時 100% 固定只會 +1。
         </div>
     </div>
 </div>
@@ -382,11 +401,13 @@
         cPrice_ticket: 38.5,
 
         safeValue: "4",
+        targetMode: "over3",
         p4to5: 25,
         p5to6: 20,
         p6to7: 16.67,
         p7to8: 14.29,
         p8to9: 12.5,
+        p9to10: 10.0,
         pB2Ratio: 50
     };
 
@@ -423,7 +444,6 @@
 
     function handlePriceInput(input, sourceCurrency) {
         let val = input.value.replace(/,/g, '');
-        // 允許輸入小數點的即時響應
         if (!isNaN(val) || val.endsWith('.')) {
             syncPriceField(input.id, sourceCurrency);
             saveAndCalculate();
@@ -463,8 +483,28 @@
         });
     }
 
+    function updateTargetOptions() {
+        const safeMode = document.getElementById('safeValue').value;
+        const targetSelect = document.getElementById('targetMode');
+        const currentVal = targetSelect.value || "over3";
+
+        if (safeMode === "4") {
+            targetSelect.innerHTML = `
+                <option value="over3">目標 +7 (過3裝)</option>
+                <option value="over4">目標 +8 (過4裝)</option>
+            `;
+        } else {
+            targetSelect.innerHTML = `
+                <option value="over3">目標 +9 (過3裝)</option>
+                <option value="over4">目標 +10 (過4裝)</option>
+            `;
+        }
+        targetSelect.value = currentVal;
+    }
+
     function toggleProbInputs() {
         const safeMode = document.getElementById('safeValue').value;
+        const targetMode = document.getElementById('targetMode').value;
         const targetTitle = document.getElementById('target-title');
         const targetText = document.getElementById('target-text');
 
@@ -472,23 +512,37 @@
             document.getElementById('prob-4to5').style.display = 'flex';
             document.getElementById('prob-5to6').style.display = 'flex';
             document.getElementById('prob-6to7').style.display = 'flex';
-            document.getElementById('prob-7to8').style.display = 'none';
+            document.getElementById('prob-7to8').style.display = targetMode === 'over4' ? 'flex' : 'none';
             document.getElementById('prob-8to9').style.display = 'none';
-            targetTitle.innerText = "安定4過3裝 (+7)";
-            targetText.innerText = "+7";
+            document.getElementById('prob-9to10').style.display = 'none';
+
+            if (targetMode === 'over3') {
+                targetTitle.innerText = "安定4過3裝 (+7)";
+                targetText.innerText = "+7";
+            } else {
+                targetTitle.innerText = "安定4過4裝 (+8)";
+                targetText.innerText = "+8";
+            }
         } else {
             document.getElementById('prob-4to5').style.display = 'none';
             document.getElementById('prob-5to6').style.display = 'none';
             document.getElementById('prob-6to7').style.display = 'flex';
             document.getElementById('prob-7to8').style.display = 'flex';
             document.getElementById('prob-8to9').style.display = 'flex';
-            targetTitle.innerText = "安定6過3裝 (+9)";
-            targetText.innerText = "+9";
+            document.getElementById('prob-9to10').style.display = targetMode === 'over4' ? 'flex' : 'none';
+
+            if (targetMode === 'over3') {
+                targetTitle.innerText = "安定6過3裝 (+9)";
+                targetText.innerText = "+9";
+            } else {
+                targetTitle.innerText = "安定6過4裝 (+10)";
+                targetText.innerText = "+10";
+            }
         }
     }
 
     function loadParams() {
-        const stored = localStorage.getItem('lineage_calc_params_v18');
+        const stored = localStorage.getItem('lineage_armor_calc_params_v19');
         let params = defaultParams;
         if (stored) {
             try {
@@ -512,14 +566,18 @@
             if (input) input.value = parseFloat(params[key]).toFixed(1);
         });
 
-        const normalKeys = ['p4to5', 'p5to6', 'p6to7', 'p7to8', 'p8to9', 'pB2Ratio'];
+        const normalKeys = ['p4to5', 'p5to6', 'p6to7', 'p7to8', 'p8to9', 'p9to10', 'pB2Ratio'];
         normalKeys.forEach(key => {
             const input = document.getElementById(key);
-            if (input) input.value = params[key];
+            if (input) input.value = params[key] !== undefined ? params[key] : defaultParams[key];
         });
 
         const safeSelect = document.getElementById('safeValue');
         if (safeSelect) safeSelect.value = params.safeValue || "4";
+
+        updateTargetOptions();
+        const targetSelect = document.getElementById('targetMode');
+        if (targetSelect) targetSelect.value = params.targetMode || "over3";
 
         if (params.currency) currentCurrency = params.currency;
         
@@ -544,15 +602,16 @@
             params[key] = el ? parseFloat(parseRawNumber(el.value).toFixed(1)) : 0;
         });
 
-        const normalKeys = ['p4to5', 'p5to6', 'p6to7', 'p7to8', 'p8to9', 'pB2Ratio'];
+        const normalKeys = ['p4to5', 'p5to6', 'p6to7', 'p7to8', 'p8to9', 'p9to10', 'pB2Ratio'];
         normalKeys.forEach(key => {
             const el = document.getElementById(key);
             params[key] = el ? parseFloat(el.value) || 0 : 0;
         });
 
         params.safeValue = document.getElementById('safeValue').value;
+        params.targetMode = document.getElementById('targetMode').value;
 
-        localStorage.setItem('lineage_calc_params_v18', JSON.stringify(params));
+        localStorage.setItem('lineage_armor_calc_params_v19', JSON.stringify(params));
     }
 
     function setCurrency(type) {
@@ -595,70 +654,95 @@
         const cP = parseRawNumber(document.getElementById('cPrice' + suffix).value);
 
         const safeMode = document.getElementById('safeValue').value;
+        const targetMode = document.getElementById('targetMode').value;
 
         const p4to5 = (parseFloat(document.getElementById('p4to5').value) || 0) / 100;
         const p5to6 = (parseFloat(document.getElementById('p5to6').value) || 0) / 100;
         const p6to7 = (parseFloat(document.getElementById('p6to7').value) || 0) / 100;
         const p7to8 = (parseFloat(document.getElementById('p7to8').value) || 0) / 100;
         const p8to9 = (parseFloat(document.getElementById('p8to9').value) || 0) / 100;
+        const p9to10 = (parseFloat(document.getElementById('p9to10').value) || 0) / 100;
         const b2Ratio = (parseFloat(document.getElementById('pB2Ratio').value) || 0) / 100;
 
         let plans = [];
 
         if (safeMode === "4") {
             if (p4to5 <= 0 || p5to6 <= 0 || p6to7 <= 0) return;
+            if (targetMode === "over4" && p7to8 <= 0) return;
 
             const costSafe = eqP + (4 * nP);
             const costPlus3 = eqP + (3 * nP);
 
             const c5_N = (costSafe + nP) / p4to5;
             const c6_N = (c5_N + nP) / p5to6;
+            const c7_N = (c6_N + nP) / p6to7;
 
-            const c7_PlanA = (c6_N + nP) / p6to7;
+            // 方案 A：全用普通防卷
+            const c7_PlanA = c7_N;
+            const final_PlanA = targetMode === "over3" ? c7_PlanA : (c7_PlanA + nP) / p7to8;
 
+            // 方案 B：+4 點祝防
             const pB4_plus2 = p4to5 * b2Ratio;
             const pB4_plus1 = p4to5 * (1 - b2Ratio);
             let c6_PlanB_base = ((costSafe + bP) - (pB4_plus1 * c5_N)) / pB4_plus2;
             if (c6_PlanB_base < 0) c6_PlanB_base = 0;
             const c7_PlanB = (c6_PlanB_base + nP) / p6to7;
+            const final_PlanB = targetMode === "over3" ? c7_PlanB : (c7_PlanB + nP) / p7to8;
 
+            // 方案 D：先普通防卷到 +5，再用祝防
             const pB5_plus2 = p5to6 * b2Ratio;
             const pB5_plus1 = p5to6 * (1 - b2Ratio);
             const c7_PlanD = (c5_N + bP + (pB5_plus1 * nP)) / (pB5_plus2 + (pB5_plus1 * p6to7));
+            const final_PlanD = targetMode === "over3" ? c7_PlanD : (c7_PlanD + nP) / p7to8;
 
-            const c5_PlanC = costPlus3 + (2 * bP) + cP;
-            const c7_PlanC = (c5_PlanC + bP + (pB5_plus1 * nP)) / (pB5_plus2 + (pB5_plus1 * p6to7));
-
+            // 方案 E2：+3 砸祝防，+4 補防卷衝 +5，+5 再砸祝防
             const c5_E2 = costPlus3 + bP + (0.5 * c5_N);
             const c7_PlanE2 = (c5_E2 + bP + (pB5_plus1 * nP)) / (pB5_plus2 + (pB5_plus1 * p6to7));
+            const final_PlanE2 = targetMode === "over3" ? c7_PlanE2 : (c7_PlanE2 + nP) / p7to8;
+
+            // 方案 C：+3 砸祝防 + 紅防歸位，+5 再用祝防
+            const c5_PlanC = costPlus3 + (2 * bP) + cP;
+            const c7_PlanC = (c5_PlanC + bP + (pB5_plus1 * nP)) / (pB5_plus2 + (pB5_plus1 * p6to7));
+            const final_PlanC = targetMode === "over3" ? c7_PlanC : (c7_PlanC + nP) / p7to8;
+
+            const tName = targetMode === "over3" ? "+7" : "+8";
 
             plans = [
-                { name: "方案 D：先用普通防卷衝 +5，+5 再砸祝防", cost: c7_PlanD, desc: "+5 砸祝防，10% 機率直接跳 +7，10% 跳 +6 補普通防卷衝 +7。" },
-                { name: "方案 B：+4 砸祝防，其餘用普通防卷", cost: c7_PlanB, desc: "+4 砸祝防賭 50% 跳 +6 避開高爆率階段，過安定後全補普通防卷。" },
-                { name: "方案 E2：+3 砸祝防，+4 補防卷衝 +5，+5 再砸祝防", cost: c7_PlanE2, desc: "+3 砸祝防，變 +4 補普通防卷硬衝 +5，+5 再用祝防衝 +7。" },
-                { name: "方案 C：+3 砸祝防 + 紅防歸位，+5 再用祝防", cost: c7_PlanC, desc: "+3 砸祝防，若變 +4 用紅防退回 +3 重點到 +5，+5 再用祝防衝 +7。" },
-                { name: "方案 A：全用普通防卷硬衝", cost: c7_PlanA, desc: "從 +4 一路硬衝到 +7，最傳統穩定的點法。" }
+                { name: `方案 D：先用普通防卷衝 +5，+5 再砸祝防`, cost: final_PlanD, desc: `+5 砸祝防賭跳 +7，過安定後全用普通防卷補至 ${tName}。` },
+                { name: `方案 B：+4 砸祝防，其餘用普通防卷`, cost: final_PlanB, desc: `+4 砸祝防賭跳 +6 避開高爆率階段，過安定後全補普通防卷至 ${tName}。` },
+                { name: `方案 E2：+3 砸祝防，+4 補防卷衝 +5，+5 再砸祝防`, cost: final_PlanE2, desc: `+3 砸祝防，變 +4 補普通防卷硬衝 +5，+5 再用祝防，後續補普通防卷至 ${tName}。` },
+                { name: `方案 C：+3 砸祝防 + 紅防歸位，+5 再用祝防`, cost: final_PlanC, desc: `+3 砸祝防，若變 +4 用紅防退回 +3 重點到 +5，+5 再用祝防，後續衝 ${tName}。` },
+                { name: `方案 A：全用普通防卷硬衝`, cost: final_PlanA, desc: `從 +4 一路硬衝到 ${tName}，最傳統穩定的點法。` }
             ];
 
         } else {
             if (p6to7 <= 0 || p7to8 <= 0 || p8to9 <= 0) return;
+            if (targetMode === "over4" && p9to10 <= 0) return;
 
             const costPlus5 = eqP + (5 * nP);
             const costPlus6 = eqP + (6 * nP);
 
             const c7_N = (costPlus6 + nP) / p6to7;
             const c8_N = (c7_N + nP) / p7to8;
-            const c9_PlanA = (c8_N + nP) / p8to9;
+            const c9_N = (c8_N + nP) / p8to9;
 
+            // 方案 A：全用普通防卷
+            const c9_PlanA = c9_N;
+            const final_PlanA = targetMode === "over3" ? c9_PlanA : (c9_PlanA + nP) / p9to10;
+
+            // 方案 B：+5 點祝防衝 +7
             const pB_jump2 = b2Ratio;
             const pB_jump1 = 1 - b2Ratio;
             const c7_PlanB_base = (costPlus5 + bP + (pB_jump1 * nP)) / (pB_jump2 + (pB_jump1 * p6to7));
             const c8_PlanB = (c7_PlanB_base + nP) / p7to8;
             const c9_PlanB = (c8_PlanB + nP) / p8to9;
+            const final_PlanB = targetMode === "over3" ? c9_PlanB : (c9_PlanB + nP) / p9to10;
+
+            const tName = targetMode === "over3" ? "+9" : "+10";
 
             plans = [
-                { name: "方案 B：+5 砸祝防(拼跳+7)，其餘用普通防卷", cost: c9_PlanB, desc: "+5 砸祝防 100% 成功，50% 直達 +7，之後補普通防卷衝 +9。" },
-                { name: "方案 A：全用普通防卷", cost: c9_PlanA, desc: "一路用普通防卷點至 +9。" }
+                { name: `方案 B：+5 砸祝防(拼跳+7)，其餘用普通防卷`, cost: final_PlanB, desc: `+5 砸祝防 100% 成功直達 +7，之後補普通防卷衝 ${tName}。` },
+                { name: `方案 A：全用普通防卷`, cost: final_PlanA, desc: `一路用普通防卷點至 ${tName}。` }
             ];
         }
 
