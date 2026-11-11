@@ -52,7 +52,7 @@
         }
 
         .rate-card input {
-            width: 160px;
+            width: 140px;
             padding: 6px 10px;
             border-radius: 4px;
             border: 1px solid var(--border-color);
@@ -212,10 +212,7 @@
     <!-- 匯率比值設定區 -->
     <div class="rate-card">
         <label for="rate">1 銀票等於幾天幣：</label>
-        <input type="text" id="rate" class="number-input" 
-               oninput="handleRateInput(this)" 
-               onfocus="handleFocus(this)" 
-               onblur="handleBlur(this, false)">
+        <input type="text" id="rate" class="number-input" oninput="handleRateInput(this)">
     </div>
 
     <!-- 幣別切換 -->
@@ -234,37 +231,25 @@
                 <div class="form-group">
                     <label for="eqPrice_aden">防具單價 (天幣):</label>
                     <div class="input-wrap">
-                        <input type="text" id="eqPrice_aden" class="number-input" 
-                               oninput="handlePriceInput(this, 'aden')" 
-                               onfocus="handleFocus(this)" 
-                               onblur="handleBlur(this, false)">
+                        <input type="text" id="eqPrice_aden" class="number-input" oninput="handlePriceInput(this, 'aden')">
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="nPrice_aden">防卷 單價 (天幣):</label>
                     <div class="input-wrap">
-                        <input type="text" id="nPrice_aden" class="number-input" 
-                               oninput="handlePriceInput(this, 'aden')" 
-                               onfocus="handleFocus(this)" 
-                               onblur="handleBlur(this, false)">
+                        <input type="text" id="nPrice_aden" class="number-input" oninput="handlePriceInput(this, 'aden')">
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="bPrice_aden">祝防 單價 (天幣):</label>
                     <div class="input-wrap">
-                        <input type="text" id="bPrice_aden" class="number-input" 
-                               oninput="handlePriceInput(this, 'aden')" 
-                               onfocus="handleFocus(this)" 
-                               onblur="handleBlur(this, false)">
+                        <input type="text" id="bPrice_aden" class="number-input" oninput="handlePriceInput(this, 'aden')">
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="cPrice_aden">紅防 單價 (天幣):</label>
                     <div class="input-wrap">
-                        <input type="text" id="cPrice_aden" class="number-input" 
-                               oninput="handlePriceInput(this, 'aden')" 
-                               onfocus="handleFocus(this)" 
-                               onblur="handleBlur(this, false)">
+                        <input type="text" id="cPrice_aden" class="number-input" oninput="handlePriceInput(this, 'aden')">
                     </div>
                 </div>
             </div>
@@ -274,37 +259,25 @@
                 <div class="form-group">
                     <label for="eqPrice_ticket">防具單價 (銀票):</label>
                     <div class="input-wrap">
-                        <input type="text" id="eqPrice_ticket" class="number-input" 
-                               oninput="handlePriceInput(this, 'ticket')" 
-                               onfocus="handleFocus(this)" 
-                               onblur="handleBlur(this, true)">
+                        <input type="text" id="eqPrice_ticket" class="number-input" oninput="handlePriceInput(this, 'ticket')">
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="nPrice_ticket">防卷 單價 (銀票):</label>
                     <div class="input-wrap">
-                        <input type="text" id="nPrice_ticket" class="number-input" 
-                               oninput="handlePriceInput(this, 'ticket')" 
-                               onfocus="handleFocus(this)" 
-                               onblur="handleBlur(this, true)">
+                        <input type="text" id="nPrice_ticket" class="number-input" oninput="handlePriceInput(this, 'ticket')">
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="bPrice_ticket">祝防 單價 (銀票):</label>
                     <div class="input-wrap">
-                        <input type="text" id="bPrice_ticket" class="number-input" 
-                               oninput="handlePriceInput(this, 'ticket')" 
-                               onfocus="handleFocus(this)" 
-                               onblur="handleBlur(this, true)">
+                        <input type="text" id="bPrice_ticket" class="number-input" oninput="handlePriceInput(this, 'ticket')">
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="cPrice_ticket">紅防 單價 (銀票):</label>
                     <div class="input-wrap">
-                        <input type="text" id="cPrice_ticket" class="number-input" 
-                               oninput="handlePriceInput(this, 'ticket')" 
-                               onfocus="handleFocus(this)" 
-                               onblur="handleBlur(this, true)">
+                        <input type="text" id="cPrice_ticket" class="number-input" oninput="handlePriceInput(this, 'ticket')">
                     </div>
                 </div>
             </div>
@@ -440,11 +413,10 @@
 
     let currentCurrency = 'aden';
 
-    // 格式化數字呈現 (只在失焦或初始化時調用)
     function formatNumberDisplay(val, isTicket = false) {
         if (val === "" || val === null || val === undefined) return "";
-        let clean = val.toString().replace(/,/g, '').trim();
-        if (isNaN(clean) || clean === "") return "";
+        let clean = val.toString().replace(/,/g, '');
+        if (isNaN(clean)) return "";
         
         if (isTicket) {
             let num = parseFloat(clean);
@@ -455,35 +427,27 @@
         }
     }
 
-    // 純淨解析數字，避免任何千分位或雜質字元導致 NaN 或位數偏移
     function parseRawNumber(val) {
         if (!val) return 0;
-        let clean = val.toString().replace(/,/g, '').trim();
-        let num = parseFloat(clean);
-        return isNaN(num) ? 0 : num;
+        let clean = val.toString().replace(/,/g, '');
+        return parseFloat(clean) || 0;
     }
 
-    // 使用者聚焦輸入框時，暫時剝除逗點，避免編輯游標位移錯亂
-    function handleFocus(input) {
-        let clean = input.value.replace(/,/g, '').trim();
-        input.value = clean;
-    }
-
-    // 失焦時才補回千分位
-    function handleBlur(input, isTicket) {
-        input.value = formatNumberDisplay(input.value, isTicket);
-    }
-
-    // 匯率輸入時：即時換算，但「不強制即時回填千分位」，防止輸入第 4 位數時被格式化截斷跳萬位
     function handleRateInput(input) {
+        let rawValue = input.value.replace(/,/g, '');
+        if (!isNaN(rawValue)) {
+            input.value = formatNumberDisplay(rawValue, false);
+        }
         syncAllCurrencies('aden');
         saveAndCalculate();
     }
 
-    // 價格輸入時：即時連動另一種幣別
     function handlePriceInput(input, sourceCurrency) {
-        syncPriceField(input.id, sourceCurrency);
-        saveAndCalculate();
+        let val = input.value.replace(/,/g, '');
+        if (!isNaN(val) || val.endsWith('.')) {
+            syncPriceField(input.id, sourceCurrency);
+            saveAndCalculate();
+        }
     }
 
     function syncPriceField(elementId, sourceCurrency) {
@@ -503,12 +467,10 @@
         if (sourceCurrency === 'aden') {
             const adenVal = parseRawNumber(document.getElementById(adenId).value);
             const ticketVal = rate > 0 ? (adenVal / rate).toFixed(1) : 0;
-            // 更新另一邊的銀票
             document.getElementById(ticketId).value = ticketVal;
         } else {
             const ticketVal = parseRawNumber(document.getElementById(ticketId).value);
             const adenVal = Math.round(ticketVal * rate);
-            // 更新另一邊的天幣（帶千分位）
             document.getElementById(adenId).value = adenVal.toLocaleString('zh-TW');
         }
     }
